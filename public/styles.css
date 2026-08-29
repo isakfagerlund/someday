@@ -108,6 +108,47 @@
     padding-block: clamp(var(--space-12), 9vw, 7rem);
   }
 
+  .home {
+    gap: var(--space-8);
+    padding-block: clamp(var(--space-12), 9vw, 7rem);
+  }
+
+  .home__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .home-action {
+    padding: 0.65rem var(--space-6);
+    color: var(--color-bg);
+    background: var(--color-text);
+    border-radius: var(--radius-pill);
+    text-decoration: none;
+  }
+
+  .board-list {
+    display: grid;
+    gap: var(--space-3);
+    list-style: none;
+  }
+
+  .board-link {
+    display: block;
+    padding: var(--space-6);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    font-size: 1.25rem;
+    font-weight: 550;
+    text-decoration: none;
+  }
+
+  .board-title {
+    text-decoration: none;
+  }
+
   .catalog__heading {
     display: flex;
     align-items: center;
@@ -344,15 +385,30 @@
   }
 
   .product__edit {
+    display: grid;
     position: absolute;
     top: var(--space-3);
     right: var(--space-3);
-    padding: 0.45rem var(--space-3);
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    place-items: center;
     color: var(--color-text);
     background: color-mix(in srgb, var(--color-surface) 90%, transparent);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-pill);
     cursor: pointer;
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+
+  .product__edit svg {
+    width: 1.2rem;
+    height: 1.2rem;
+    fill: currentColor;
+  }
+
+  .product__edit:hover {
+    transform: scale(1.04);
   }
 
   .import-dialog,
@@ -465,12 +521,28 @@
   }
 
   .product__edit:focus-visible,
+  .home-action:focus-visible,
+  .board-link:focus-visible,
+  .board-title:focus-visible,
   .dialog-close:focus-visible,
   .product-form button:focus-visible,
   .product-form input:focus-visible,
   .product-form select:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 3px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  @layer components {
+    .product__edit {
+      opacity: 0;
+    }
+
+    .product:hover .product__edit,
+    .product:focus-within .product__edit {
+      opacity: 1;
+    }
   }
 }
 

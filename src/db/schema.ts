@@ -6,16 +6,18 @@ import {
   real,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core"
 
 import { categories, type SubjectPosition } from "../domain/product"
-
-export const defaultBoardId = "default"
 
 const now = sql`(unixepoch() * 1000)`
 
 export const boards = sqliteTable("boards", {
   id: text("id").notNull().primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  clerkOwnerId: text("clerk_owner_id").notNull().unique(),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
     .default(now),
@@ -29,7 +31,7 @@ export const products = sqliteTable(
       .notNull()
       .references(() => boards.id),
     sourceUrl: text("source_url").notNull(),
-    canonicalUrl: text("canonical_url").notNull().unique(),
+    canonicalUrl: text("canonical_url").notNull(),
     name: text("name").notNull(),
     brand: text("brand").notNull(),
     category: text("category", { enum: categories }).notNull(),
@@ -61,6 +63,10 @@ export const products = sqliteTable(
       table.boardId,
       table.category,
       table.createdAt,
+    ),
+    uniqueIndex("products_board_url_unique").on(
+      table.boardId,
+      table.canonicalUrl,
     ),
   ],
 )

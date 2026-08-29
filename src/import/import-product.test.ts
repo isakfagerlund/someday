@@ -47,10 +47,13 @@ describe("importProduct", () => {
     mocks.insertProduct.mockResolvedValue(savedProduct)
     vi.spyOn(console, "error").mockImplementation(() => undefined)
 
-    await expect(importProduct(sourceUrl, {} as Env)).resolves.toEqual(savedProduct)
+    await expect(
+      importProduct(sourceUrl, "default", {} as Env),
+    ).resolves.toEqual(savedProduct)
     expect(mocks.storeProductImage).not.toHaveBeenCalled()
     expect(mocks.insertProduct).toHaveBeenCalledWith(
       undefined,
+      "default",
       expect.objectContaining({
         sourceUrl,
         canonicalUrl: sourceUrl,

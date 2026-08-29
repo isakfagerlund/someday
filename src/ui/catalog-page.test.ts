@@ -30,9 +30,21 @@ const products: CatalogProduct[] = [
   },
 ]
 
+const board = {
+  id: "default",
+  name: "someday",
+  slug: "isaks-board",
+  clerkOwnerId: "user_owner",
+}
+
 describe("renderCatalogPage", () => {
   it("renders responsive images and prioritizes only the first one", () => {
-    const html = renderCatalogPage({ activeCategory: null, products })
+    const html = renderCatalogPage({
+      activeCategory: null,
+      board,
+      canManage: true,
+      products,
+    })
 
     expect(html).toContain("/images/first-image/360.webp 360w")
     expect(html).toContain("/images/first-image/1080.webp 1080w")
@@ -45,6 +57,8 @@ describe("renderCatalogPage", () => {
   it("renders a product without requesting a missing image", () => {
     const html = renderCatalogPage({
       activeCategory: null,
+      board,
+      canManage: false,
       products: [
         {
           ...products[0],
@@ -57,5 +71,20 @@ describe("renderCatalogPage", () => {
     expect(html).not.toContain("<img")
     expect(html).not.toContain("/images/")
     expect(html).toContain("First product")
+  })
+
+  it("omits all management markup and scripts from the public page", () => {
+    const html = renderCatalogPage({
+      activeCategory: null,
+      board,
+      canManage: false,
+      products,
+    })
+
+    expect(html).not.toContain("data-open-import-dialog")
+    expect(html).not.toContain("data-edit-product")
+    expect(html).not.toContain("/catalog.js")
+    expect(html).not.toContain("<dialog")
+    expect(html).toContain('href="/isaks-board?category=Clothing"')
   })
 })

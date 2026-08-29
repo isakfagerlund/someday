@@ -35,12 +35,13 @@ async function removeFailedImage(bucket: R2Bucket, processedImageKey: string) {
 function isCanonicalUrlConflict(error: unknown) {
   return (
     error instanceof Error &&
-    error.message.includes("UNIQUE constraint failed: products.canonical_url")
+    error.message.includes("products.canonical_url")
   )
 }
 
 export async function importProduct(
   input: string,
+  boardId: string,
   env: Env,
 ): Promise<CatalogProduct> {
   const sourceUrl = validateProductUrl(input).href
@@ -57,7 +58,7 @@ export async function importProduct(
     details = { ...details, canonicalUrl: expectedCanonicalUrl }
     importEvidence = collected
 
-    if (await productExists(env.DB, expectedCanonicalUrl)) {
+    if (await productExists(env.DB, boardId, expectedCanonicalUrl)) {
       throw new DuplicateProductError()
     }
     duplicateChecked = true
@@ -90,7 +91,10 @@ export async function importProduct(
     )
   }
 
-  if (!duplicateChecked && (await productExists(env.DB, details.canonicalUrl))) {
+  if (
+    !duplicateChecked &&
+    (await productExists(env.DB, boardId, details.canonicalUrl))
+  ) {
     throw new DuplicateProductError()
   }
 
@@ -116,7 +120,7 @@ export async function importProduct(
   }
 
   try {
-    return await insertProduct(env.DB, {
+    return await insertProduct(env.DB, boardId, {
       id: crypto.randomUUID(),
       sourceUrl,
       ...details,

@@ -1,17 +1,10 @@
+import type { Board } from "../db/boards"
 import {
   categories,
   type CatalogProduct,
   type Category,
 } from "../domain/product"
 import { escapeHtml } from "./html"
-
-function renderFilter(label: string, category: Category | null, active: boolean) {
-  const href = category ? `/?category=${encodeURIComponent(category)}` : "/"
-  const current = active ? ' aria-current="page"' : ""
-  const icon = categoryIcons[category ?? "All"]
-
-  return `<li><a class="filter" href="${href}"${current}>${icon}<span>${label}</span></a></li>`
-}
 
 const categoryIcons: Record<Category | "All", string> = {
   All: `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M104,40H56A16,16,0,0,0,40,56v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,104,40Zm0,64H56V56h48v48Zm96-64H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm0,64H152V56h48v48Zm-96,32H56a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,104,136Zm0,64H56V152h48v48Zm96-64H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,200,136Zm0,64H152V152h48v48Z"/></svg>`,
@@ -23,7 +16,41 @@ const categoryIcons: Record<Category | "All", string> = {
 
 const closeIcon = `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128l66.35,66.34A8,8,0,0,1,205.66,194.34Z"/></svg>`
 
-function renderProductCard(product: CatalogProduct, index: number) {
+const editIcon = `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M227.31,73.37,182.63,28.69a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96A16,16,0,0,0,227.31,73.37ZM48,163.31l88-88L152.69,92,64.68,180H48Zm42.69,44.71L64,208V195.31l88-88L168.69,124ZM216,84.69,180,120.69,135.31,76,171.31,40,216,84.69Z"/></svg>`
+
+const importMessages: Record<string, string> = {
+  duplicate: "That product is already on this board.",
+  invalid: "Enter a valid public product URL.",
+}
+
+interface CatalogPageProps {
+  activeCategory: Category | null
+  board: Board
+  canManage: boolean
+  importStatus?: string | null
+  products: CatalogProduct[]
+}
+
+function renderFilter(
+  boardSlug: string,
+  label: string,
+  category: Category | null,
+  active: boolean,
+) {
+  const boardPath = `/${encodeURIComponent(boardSlug)}`
+  const href = category
+    ? `${boardPath}?category=${encodeURIComponent(category)}`
+    : boardPath
+  const current = active ? ' aria-current="page"' : ""
+
+  return `<li><a class="filter" href="${href}"${current}>${categoryIcons[category ?? "All"]}<span>${label}</span></a></li>`
+}
+
+function renderProductCard(
+  product: CatalogProduct,
+  index: number,
+  canManage: boolean,
+) {
   const productUrl = escapeHtml(product.sourceUrl)
   const imageUrl = product.processedImageKey
     ? `/images/${encodeURIComponent(product.processedImageKey)}`
@@ -45,6 +72,17 @@ function renderProductCard(product: CatalogProduct, index: number) {
           ${loading}
           decoding="async">`
     : ""
+  const editButton = canManage
+    ? `<button
+      class="product__edit"
+      type="button"
+      aria-label="Edit ${name}"
+      data-edit-product
+      data-product-id="${escapeHtml(product.id)}"
+      data-product-name="${name}"
+      data-product-brand="${brand}"
+      data-product-category="${escapeHtml(product.category)}">${editIcon}</button>`
+    : ""
 
   return `<li>
   <article class="product">
@@ -55,109 +93,35 @@ function renderProductCard(product: CatalogProduct, index: number) {
         <h2 class="product-card__name">${name}</h2>
       </span>
     </a>
+    ${editButton}
   </article>
 </li>`
 }
 
-interface CatalogPageProps {
-  activeCategory: Category | null
-  importStatus?: string | null
-  products: CatalogProduct[]
-}
-
-const importMessages: Record<string, string> = {
-  duplicate: "That product is already in the catalog.",
-  invalid: "Enter a valid public product URL.",
-}
-
-export function renderCatalogPage({
-  activeCategory,
-  importStatus,
-  products,
-}: CatalogPageProps) {
-  const filters = [
-    renderFilter("All", null, activeCategory === null),
-    ...categories.map((category) =>
-      renderFilter(category, category, category === activeCategory),
-    ),
-  ].join("")
-  const catalog = products.length
-    ? `<ul class="product-grid" role="list">${products.map(renderProductCard).join("")}</ul>`
-    : `<section class="empty-state" aria-labelledby="empty-state-title">
-        <h2 id="empty-state-title">No products yet</h2>
-        <p>Products will appear here after the first link is added.</p>
-      </section>`
-  const title = activeCategory ? `${activeCategory} · someday` : "someday"
-  const importMessage = importStatus ? importMessages[importStatus] : undefined
-  const status = importMessage
-    ? `<p class="import-status" role="status">${importMessage}</p>`
-    : ""
-  const openImportDialog = importMessage ? " data-open-on-load" : ""
-
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light dark">
-    <title>${title}</title>
-    <link rel="stylesheet" href="/styles.css">
-  </head>
-  <body>
-    <main class="wrapper catalog stack">
-      <div class="catalog__heading">
-        <h1>someday</h1>
-        <button
-          class="add-product-button"
-          type="button"
-          aria-label="Add product"
-          data-open-import-dialog>
-          <svg viewBox="0 0 256 256" aria-hidden="true">
-            <path d="M216,128a8,8,0,0,1-8,8H136v72a8,8,0,0,1-16,0V136H48a8,8,0,0,1,0-16h72V48a8,8,0,0,1,16,0v72h72A8,8,0,0,1,216,128Z"/>
-          </svg>
-        </button>
-      </div>
-      <nav aria-label="Product categories">
-        <ul class="filter-list" role="list">${filters}</ul>
-      </nav>
-      ${catalog}
-    </main>
-    <dialog class="import-dialog" id="import-dialog" aria-labelledby="import-dialog-title"${openImportDialog}>
+function renderImportDialog(openOnLoad: boolean, status: string) {
+  return `<dialog class="import-dialog" id="import-dialog" aria-labelledby="import-dialog-title"${openOnLoad ? " data-open-on-load" : ""}>
       <form class="import-form" id="import-form" action="/api/products" method="post">
         <div class="import-form__heading">
           <h2 id="import-dialog-title">Add product</h2>
-          <button
-            class="dialog-close"
-            type="button"
-            aria-label="Close add product dialog"
-            data-close-import-dialog>${closeIcon}</button>
+          <button class="dialog-close" type="button" aria-label="Close add product dialog" data-close-import-dialog>${closeIcon}</button>
         </div>
         <p class="import-form__intro">Paste a link and we'll do the rest</p>
         <label for="product-url">Product URL</label>
         <div class="import-form__fields">
-          <input
-            id="product-url"
-            name="url"
-            type="url"
-            inputmode="url"
-            autocomplete="url"
-            placeholder="https://shop.example/product"
-            autofocus
-            required>
+          <input id="product-url" name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://shop.example/product" autofocus required>
           <button class="import-form__submit" type="submit">Add product</button>
         </div>
         ${status}
       </form>
-    </dialog>
-    <dialog class="product-dialog" id="product-dialog" aria-labelledby="product-dialog-title">
+    </dialog>`
+}
+
+function renderProductDialog() {
+  return `<dialog class="product-dialog" id="product-dialog" aria-labelledby="product-dialog-title">
       <form class="product-form" id="product-form">
         <div class="product-form__heading">
           <h2 id="product-dialog-title">Edit product</h2>
-          <button
-            class="dialog-close"
-            type="button"
-            aria-label="Close edit product dialog"
-            data-close-dialog>${closeIcon}</button>
+          <button class="dialog-close" type="button" aria-label="Close edit product dialog" data-close-dialog>${closeIcon}</button>
         </div>
         <input id="edit-product-id" name="id" type="hidden">
         <label for="edit-product-name">Name</label>
@@ -174,8 +138,74 @@ export function renderCatalogPage({
           <button class="primary-button" type="submit">Save</button>
         </div>
       </form>
-    </dialog>
-    <script type="module" src="/catalog.js"></script>
+    </dialog>`
+}
+
+export function renderCatalogPage({
+  activeCategory,
+  board,
+  canManage,
+  importStatus,
+  products,
+}: CatalogPageProps) {
+  const filters = [
+    renderFilter(board.slug, "All", null, activeCategory === null),
+    ...categories.map((category) =>
+      renderFilter(
+        board.slug,
+        category,
+        category,
+        category === activeCategory,
+      ),
+    ),
+  ].join("")
+  const catalog = products.length
+    ? `<ul class="product-grid" role="list">${products.map((product, index) => renderProductCard(product, index, canManage)).join("")}</ul>`
+    : `<section class="empty-state" aria-labelledby="empty-state-title">
+        <h2 id="empty-state-title">No products yet</h2>
+        <p>Products will appear here after the first link is added.</p>
+      </section>`
+  const boardName = escapeHtml(board.name)
+  const title = activeCategory
+    ? `${escapeHtml(activeCategory)} · ${boardName}`
+    : boardName
+  const importMessage =
+    canManage && importStatus ? importMessages[importStatus] : undefined
+  const status = importMessage
+    ? `<p class="import-status" role="status">${importMessage}</p>`
+    : ""
+  const managementHtml = canManage
+    ? `${renderImportDialog(Boolean(importMessage), status)}
+    ${renderProductDialog()}
+    <script type="module" src="/catalog.js"></script>`
+    : ""
+  const addButton = canManage
+    ? `<button class="add-product-button" type="button" aria-label="Add product" data-open-import-dialog>
+          <svg viewBox="0 0 256 256" aria-hidden="true"><path d="M216,128a8,8,0,0,1-8,8H136v72a8,8,0,0,1-16,0V136H48a8,8,0,0,1,0-16h72V48a8,8,0,0,1,16,0v72h72A8,8,0,0,1,216,128Z"/></svg>
+        </button>`
+    : ""
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>${title}</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="wrapper catalog stack">
+      <div class="catalog__heading">
+        <h1><a class="board-title" href="/">${boardName}</a></h1>
+        ${addButton}
+      </div>
+      <nav aria-label="Product categories">
+        <ul class="filter-list" role="list">${filters}</ul>
+      </nav>
+      ${catalog}
+    </main>
+    ${managementHtml}
   </body>
 </html>`
 }

@@ -1,6 +1,7 @@
 import { z } from "zod"
 
-import { purgeCatalogCache } from "../catalog-cache"
+import { purgeBoardCache } from "../catalog-cache"
+import { getBoardByOwnerId, getProductBoard } from "../db/boards"
 import { deleteProduct, updateProduct } from "../db/products"
 import { categories } from "../domain/product"
 import { deleteProductImage } from "../images"
@@ -26,10 +27,7 @@ const updateProductInputSchema = z
 function jsonError(error: string, status: number) {
   return Response.json(
     { error },
-    {
-      status,
-      headers: { "cache-control": "no-store" },
-    },
+    { status, headers: { "cache-control": "no-store" } },
   )
 }
 
@@ -55,8 +53,12 @@ async function parseCreateProductInput(request: Request) {
   return { acceptsHtml, input: result.success ? result.data : null }
 }
 
-function redirectToCatalog(request: Request, importStatus?: string) {
-  const location = new URL("/", request.url)
+function redirectToBoard(
+  request: Request,
+  boardSlug: string,
+  importStatus?: string,
+) {
+  const location = new URL(`/${encodeURIComponent(boardSlug)}`, request.url)
 
   if (importStatus) location.searchParams.set("import", importStatus)
 
@@ -71,22 +73,26 @@ function redirectToCatalog(request: Request, importStatus?: string) {
 
 export async function handleCreateProduct(
   request: Request,
+  userId: string,
   env: Env,
   ctx: ExecutionContext,
 ) {
   const { acceptsHtml, input } = await parseCreateProductInput(request)
 
-  if (!input) {
-    if (acceptsHtml) return redirectToCatalog(request, "invalid")
-
+  if (!input && !acceptsHtml) {
     return jsonError('Send JSON like {"url":"https://shop.example/product"}', 400)
   }
 
-  try {
-    const product = await importProduct(input.url, env)
-    await purgeCatalogCache(ctx)
+  const board = await getBoardByOwnerId(env.DB, userId)
 
-    if (acceptsHtml) return redirectToCatalog(request)
+  if (!board) return jsonError("You do not own a board", 403)
+  if (!input) return redirectToBoard(request, board.slug, "invalid")
+
+  try {
+    const product = await importProduct(input.url, board.id, env)
+    await purgeBoardCache(ctx, board.id)
+
+    if (acceptsHtml) return redirectToBoard(request, board.slug)
 
     return Response.json(product, {
       status: 201,
@@ -94,13 +100,17 @@ export async function handleCreateProduct(
     })
   } catch (error) {
     if (error instanceof ProductUrlError) {
-      if (acceptsHtml) return redirectToCatalog(request, "invalid")
+      if (acceptsHtml) {
+        return redirectToBoard(request, board.slug, "invalid")
+      }
 
       return jsonError(error.message, 400)
     }
 
     if (error instanceof DuplicateProductError) {
-      if (acceptsHtml) return redirectToCatalog(request, "duplicate")
+      if (acceptsHtml) {
+        return redirectToBoard(request, board.slug, "duplicate")
+      }
 
       return jsonError(error.message, 409)
     }
@@ -111,6 +121,7 @@ export async function handleCreateProduct(
 
 export async function handleDeleteProduct(
   productId: string,
+  userId: string,
   env: Env,
   ctx: ExecutionContext,
 ) {
@@ -118,7 +129,14 @@ export async function handleDeleteProduct(
     return jsonError("Product not found", 404)
   }
 
-  const deleted = await deleteProduct(env.DB, productId)
+  const productBoard = await getProductBoard(env.DB, productId)
+
+  if (!productBoard) return jsonError("Product not found", 404)
+  if (productBoard.clerkOwnerId !== userId) {
+    return jsonError("You do not own this board", 403)
+  }
+
+  const deleted = await deleteProduct(env.DB, productId, productBoard.boardId)
 
   if (!deleted) return jsonError("Product not found", 404)
 
@@ -137,7 +155,7 @@ export async function handleDeleteProduct(
     }
   }
 
-  await purgeCatalogCache(ctx)
+  await purgeBoardCache(ctx, productBoard.boardId)
 
   return new Response(null, {
     status: 204,
@@ -148,6 +166,7 @@ export async function handleDeleteProduct(
 export async function handleUpdateProduct(
   request: Request,
   productId: string,
+  userId: string,
   env: Env,
   ctx: ExecutionContext,
 ) {
@@ -169,11 +188,23 @@ export async function handleUpdateProduct(
     return jsonError("Send name, brand, or category as JSON", 400)
   }
 
-  const product = await updateProduct(env.DB, productId, input.data)
+  const productBoard = await getProductBoard(env.DB, productId)
+
+  if (!productBoard) return jsonError("Product not found", 404)
+  if (productBoard.clerkOwnerId !== userId) {
+    return jsonError("You do not own this board", 403)
+  }
+
+  const product = await updateProduct(
+    env.DB,
+    productId,
+    productBoard.boardId,
+    input.data,
+  )
 
   if (!product) return jsonError("Product not found", 404)
 
-  await purgeCatalogCache(ctx)
+  await purgeBoardCache(ctx, productBoard.boardId)
 
   return Response.json(product, {
     headers: { "cache-control": "no-store" },

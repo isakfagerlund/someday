@@ -3,12 +3,180 @@ import {
   handleDeleteProduct,
   handleUpdateProduct,
 } from "./api/products"
-import { catalogCacheHeaders } from "./catalog-cache"
+import { addAuthHeaders, authenticateRequest } from "./auth"
+import {
+  boardCacheHeaders,
+  homeCacheHeaders,
+  privateHtmlCacheHeaders,
+} from "./catalog-cache"
+import { getBoardByOwnerId, getBoardBySlug, listBoards } from "./db/boards"
 import { listProducts } from "./db/products"
 import { isCategory } from "./domain/product"
 import { serveProductImage } from "./images"
 import { renderCatalogPage } from "./ui/catalog-page"
 import { catalogScript } from "./ui/catalog-script"
+import { renderHomePage } from "./ui/home-page"
+
+const reservedBoardSlugs = new Set([
+  "api",
+  "auth",
+  "catalog",
+  "health",
+  "images",
+])
+
+function jsonError(error: string, status: number) {
+  return Response.json(
+    { error },
+    { status, headers: { "cache-control": "no-store" } },
+  )
+}
+
+function getBoardSlug(pathname: string) {
+  const match = pathname.match(/^\/([^/]+)\/?$/)
+
+  if (!match?.[1]) return null
+
+  let slug: string
+
+  try {
+    slug = decodeURIComponent(match[1])
+  } catch {
+    return null
+  }
+
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return null
+  if (reservedBoardSlugs.has(slug)) return null
+
+  return slug
+}
+
+function createSignInUrl(signInUrl: string, request: Request) {
+  const url = new URL(signInUrl)
+  url.searchParams.set(
+    "redirect_url",
+    new URL("/auth/redirect", request.url).href,
+  )
+  return url.href
+}
+
+async function handleMutation(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  productId?: string,
+) {
+  const auth = await authenticateRequest(request, env)
+
+  if (auth.response) return auth.response
+
+  const { headers, userId } = auth.request
+
+  if (!userId) return addAuthHeaders(jsonError("Unauthorized", 401), headers)
+
+  let response: Response
+
+  if (request.method === "POST") {
+    response = await handleCreateProduct(request, userId, env, ctx)
+  } else if (request.method === "PATCH" && productId) {
+    response = await handleUpdateProduct(request, productId, userId, env, ctx)
+  } else if (request.method === "DELETE" && productId) {
+    response = await handleDeleteProduct(productId, userId, env, ctx)
+  } else {
+    response = new Response("Not found", { status: 404 })
+  }
+
+  return addAuthHeaders(response, headers)
+}
+
+async function handleHtmlRequest(request: Request, env: Env) {
+  const url = new URL(request.url)
+  const auth = await authenticateRequest(request, env)
+
+  if (auth.response) return auth.response
+
+  const { headers: authHeaders, signInUrl, userId } = auth.request
+  const cacheHeaders = userId ? privateHtmlCacheHeaders : homeCacheHeaders
+
+  if (url.pathname === "/auth/redirect") {
+    const board = userId
+      ? await getBoardByOwnerId(env.DB, userId)
+      : undefined
+    const location = board ? `/${encodeURIComponent(board.slug)}` : "/"
+
+    return addAuthHeaders(
+      new Response(null, {
+        status: 303,
+        headers: { "cache-control": "private, no-store", location },
+      }),
+      authHeaders,
+    )
+  }
+
+  if (url.pathname === "/") {
+    const boards = await listBoards(env.DB)
+    const ownerBoard = userId
+      ? boards.find((board) => board.clerkOwnerId === userId)
+      : undefined
+    const html = renderHomePage({
+      boards,
+      ownerBoard,
+      signInUrl: createSignInUrl(signInUrl, request),
+    })
+
+    return addAuthHeaders(
+      new Response(html, {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          ...cacheHeaders,
+        },
+      }),
+      authHeaders,
+    )
+  }
+
+  const slug = getBoardSlug(url.pathname)
+
+  if (!slug) {
+    return addAuthHeaders(
+      new Response("Not found", { status: 404, headers: cacheHeaders }),
+      authHeaders,
+    )
+  }
+
+  const board = await getBoardBySlug(env.DB, slug)
+
+  if (!board) {
+    return addAuthHeaders(
+      new Response("Not found", { status: 404, headers: cacheHeaders }),
+      authHeaders,
+    )
+  }
+
+  const requestedCategory = url.searchParams.get("category")
+  const activeCategory = isCategory(requestedCategory)
+    ? requestedCategory
+    : null
+  const canManage = board.clerkOwnerId === userId
+  const products = await listProducts(env.DB, board.id, activeCategory)
+  const html = renderCatalogPage({
+    activeCategory,
+    board,
+    canManage,
+    importStatus: canManage ? url.searchParams.get("import") : null,
+    products,
+  })
+
+  return addAuthHeaders(
+    new Response(html, {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        ...(userId ? privateHtmlCacheHeaders : boardCacheHeaders(board.id)),
+      },
+    }),
+    authHeaders,
+  )
+}
 
 async function handleRequest(
   request: Request,
@@ -41,38 +209,19 @@ async function handleRequest(
   }
 
   if (url.pathname === "/api/products" && request.method === "POST") {
-    return handleCreateProduct(request, env, ctx)
+    return handleMutation(request, env, ctx)
   }
 
   const productRoute = url.pathname.match(/^\/api\/products\/([^/]+)$/)
 
-  if (productRoute && request.method === "PATCH") {
-    const productId = productRoute[1] ?? ""
-    return handleUpdateProduct(request, productId, env, ctx)
+  if (
+    productRoute &&
+    (request.method === "PATCH" || request.method === "DELETE")
+  ) {
+    return handleMutation(request, env, ctx, productRoute[1] ?? "")
   }
 
-  if (productRoute && request.method === "DELETE") {
-    const productId = productRoute[1] ?? ""
-    return handleDeleteProduct(productId, env, ctx)
-  }
-
-  if (url.pathname === "/" && request.method === "GET") {
-    const requestedCategory = url.searchParams.get("category")
-    const importStatus = url.searchParams.get("import")
-    const activeCategory = isCategory(requestedCategory)
-      ? requestedCategory
-      : null
-    const products = await listProducts(env.DB, activeCategory)
-
-    return new Response(renderCatalogPage({ activeCategory, importStatus, products }), {
-      headers: {
-        "content-type": "text/html; charset=utf-8",
-        ...(importStatus
-          ? { "cache-control": "no-store" }
-          : catalogCacheHeaders),
-      },
-    })
-  }
+  if (request.method === "GET") return handleHtmlRequest(request, env)
 
   return new Response("Not found", { status: 404 })
 }
@@ -92,10 +241,7 @@ export default {
       )
 
       if (new URL(request.url).pathname.startsWith("/api/")) {
-        return Response.json(
-          { error: "Internal server error" },
-          { status: 500, headers: { "cache-control": "no-store" } },
-        )
+        return jsonError("Internal server error", 500)
       }
 
       return new Response("Internal server error", { status: 500 })

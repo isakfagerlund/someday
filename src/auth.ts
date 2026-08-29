@@ -1,0 +1,60 @@
+import { createClerkClient } from "@clerk/backend"
+
+interface AuthenticatedRequest {
+  headers: Headers
+  signInUrl: string
+  userId: string | null
+}
+
+export type RequestAuth =
+  | { request: AuthenticatedRequest; response?: never }
+  | { request?: never; response: Response }
+
+export async function authenticateRequest(
+  request: Request,
+  env: Env,
+): Promise<RequestAuth> {
+  const clerk = createClerkClient({
+    jwtKey: env.CLERK_JWT_KEY,
+    publishableKey: env.CLERK_PUBLISHABLE_KEY,
+    secretKey: env.CLERK_SECRET_KEY,
+  })
+  const state = await clerk.authenticateRequest(request, {
+    authorizedParties: [new URL(request.url).origin],
+    jwtKey: env.CLERK_JWT_KEY,
+  })
+
+  if (state.status === "handshake") {
+    return {
+      response: new Response(null, { status: 307, headers: state.headers }),
+    }
+  }
+
+  return {
+    request: {
+      headers: state.headers,
+      signInUrl: state.signInUrl,
+      userId: state.isAuthenticated ? state.toAuth().userId : null,
+    },
+  }
+}
+
+export function addAuthHeaders(response: Response, authHeaders: Headers) {
+  if ([...authHeaders].length === 0) return response
+
+  const headers = new Headers(response.headers)
+
+  for (const [name, value] of authHeaders) {
+    if (name !== "set-cookie") headers.append(name, value)
+  }
+
+  for (const cookie of authHeaders.getSetCookie()) {
+    headers.append("set-cookie", cookie)
+  }
+
+  return new Response(response.body, {
+    headers,
+    status: response.status,
+    statusText: response.statusText,
+  })
+}
