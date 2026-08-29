@@ -1,6 +1,7 @@
 export const catalogScript = String.raw`
 const importDialog = document.querySelector("#import-dialog")
 const importForm = document.querySelector("#import-form")
+const productUrlInput = document.querySelector("#product-url")
 const productDialog = document.querySelector("#product-dialog")
 const productForm = document.querySelector("#product-form")
 const errorMessage = productForm?.querySelector("[role='alert']")
@@ -12,14 +13,24 @@ function showError(message) {
   errorMessage.hidden = false
 }
 
+function openImportDialog() {
+  if (!importDialog) return
+
+  importDialog.showModal()
+
+  if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    productUrlInput?.focus()
+  }
+}
+
 document.addEventListener("click", async (event) => {
   const button =
     event.target instanceof Element ? event.target.closest("button") : null
 
   if (!button) return
 
-  if (button.matches("[data-open-import-dialog]") && importDialog) {
-    importDialog.showModal()
+  if (button.matches("[data-open-import-dialog]")) {
+    openImportDialog()
     return
   }
 
@@ -70,7 +81,7 @@ importForm?.addEventListener("submit", () => {
   }
 })
 
-if (importDialog?.hasAttribute("data-open-on-load")) importDialog.showModal()
+if (importDialog?.hasAttribute("data-open-on-load")) openImportDialog()
 
 productForm?.addEventListener("submit", async (event) => {
   event.preventDefault()

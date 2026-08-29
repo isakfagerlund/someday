@@ -140,7 +140,6 @@ export function renderCatalogPage({
             inputmode="url"
             autocomplete="url"
             placeholder="https://shop.example/product"
-            autofocus
             required>
           <button class="import-form__submit" type="submit">Add product</button>
         </div>
