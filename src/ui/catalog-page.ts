@@ -25,19 +25,17 @@ const closeIcon = `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M205.6
 
 function renderProductCard(product: CatalogProduct, index: number) {
   const productUrl = escapeHtml(product.sourceUrl)
-  const imageUrl = `/images/${encodeURIComponent(product.processedImageKey)}`
+  const imageUrl = product.processedImageKey
+    ? `/images/${encodeURIComponent(product.processedImageKey)}`
+    : null
   const name = escapeHtml(product.name)
   const brand = escapeHtml(product.brand)
   const loading =
     index === 0
       ? 'loading="eager" fetchpriority="high"'
       : 'loading="lazy"'
-
-  return `<li>
-  <article class="product">
-    <a class="product-card" href="${productUrl}">
-      <span class="product-card__image">
-        <img
+  const image = imageUrl
+    ? `<img
           src="${imageUrl}/720.webp"
           srcset="${imageUrl}/360.webp 360w, ${imageUrl}/720.webp 720w, ${imageUrl}/1080.webp 1080w"
           sizes="(min-width: 70rem) 20rem, (min-width: 48rem) 33vw, 50vw"
@@ -45,8 +43,13 @@ function renderProductCard(product: CatalogProduct, index: number) {
           height="900"
           alt="${name}"
           ${loading}
-          decoding="async">
-      </span>
+          decoding="async">`
+    : ""
+
+  return `<li>
+  <article class="product">
+    <a class="product-card" href="${productUrl}">
+      <span class="product-card__image">${image}</span>
       <span class="product-card__details">
         <span class="product-card__brand">${brand}</span>
         <h2 class="product-card__name">${name}</h2>
@@ -64,7 +67,6 @@ interface CatalogPageProps {
 
 const importMessages: Record<string, string> = {
   duplicate: "That product is already in the catalog.",
-  failed: "The product could not be imported. Try another link.",
   invalid: "Enter a valid public product URL.",
 }
 

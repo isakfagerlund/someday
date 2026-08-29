@@ -7,7 +7,6 @@ import { deleteProductImage } from "../images"
 import {
   DuplicateProductError,
   importProduct,
-  ProductImportError,
 } from "../import/import-product"
 import { ProductUrlError } from "../import/product-url"
 
@@ -106,12 +105,6 @@ export async function handleCreateProduct(
       return jsonError(error.message, 409)
     }
 
-    if (error instanceof ProductImportError) {
-      if (acceptsHtml) return redirectToCatalog(request, "failed")
-
-      return jsonError(error.message, 422)
-    }
-
     throw error
   }
 }
@@ -129,17 +122,19 @@ export async function handleDeleteProduct(
 
   if (!deleted) return jsonError("Product not found", 404)
 
-  try {
-    await deleteProductImage(env.IMAGE_BUCKET, deleted.processedImageKey)
-  } catch (error) {
-    console.error(
-      JSON.stringify({
-        message: "failed to delete product image",
-        productId,
-        processedImageKey: deleted.processedImageKey,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    )
+  if (deleted.processedImageKey) {
+    try {
+      await deleteProductImage(env.IMAGE_BUCKET, deleted.processedImageKey)
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          message: "failed to delete product image",
+          productId,
+          processedImageKey: deleted.processedImageKey,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      )
+    }
   }
 
   await purgeCatalogCache(ctx)
