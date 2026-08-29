@@ -1,5 +1,6 @@
 import {
   extractProductEvidence,
+  ProductEvidenceError,
   type ProductEvidence,
 } from "./product-evidence"
 import {
@@ -113,10 +114,15 @@ export async function collectProductEvidence(
   fetcher: ProductFetcher = fetch,
 ): Promise<CollectedProductEvidence> {
   const page = await fetchProductPage(input, fetcher)
-  const directEvidence = await extractProductEvidence(page.response, page.url)
 
-  if (!needsRenderedFallback(directEvidence)) {
-    return { evidence: directEvidence, method: "direct" }
+  try {
+    const directEvidence = await extractProductEvidence(page.response, page.url)
+
+    if (!needsRenderedFallback(directEvidence)) {
+      return { evidence: directEvidence, method: "direct" }
+    }
+  } catch (error) {
+    if (!(error instanceof ProductEvidenceError)) throw error
   }
 
   return {

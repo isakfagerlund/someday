@@ -100,4 +100,33 @@ describe("collectProductEvidence", () => {
       }),
     )
   })
+
+  it("renders when the direct fetch is blocked", async () => {
+    const browser = {
+      quickAction: vi.fn().mockResolvedValue(
+        Response.json({
+          success: true,
+          result:
+            `<title>Desk Lamp</title><meta property="og:image" content="/rendered-lamp.jpg">`,
+          meta: {
+            status: 200,
+            title: "Desk Lamp",
+            finalUrl: "https://shop.example.com/product",
+          },
+        }),
+      ),
+    } satisfies ProductBrowser
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response("Blocked", { status: 403 }),
+    )
+
+    const result = await collectProductEvidence(
+      "https://shop.example.com/product",
+      browser,
+      fetcher,
+    )
+
+    expect(result.method).toBe("rendered")
+    expect(browser.quickAction).toHaveBeenCalledOnce()
+  })
 })
