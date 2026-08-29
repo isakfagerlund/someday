@@ -41,4 +41,21 @@ describe("renderCatalogPage", () => {
     expect(html).toContain('action="/api/products"')
     expect(html).toContain('src="/catalog.js"')
   })
+
+  it("renders a product without requesting a missing image", () => {
+    const html = renderCatalogPage({
+      activeCategory: null,
+      products: [
+        {
+          ...products[0],
+          originalImageUrl: "",
+          processedImageKey: "",
+        },
+      ],
+    })
+
+    expect(html).not.toContain("<img")
+    expect(html).not.toContain("/images/")
+    expect(html).toContain("First product")
+  })
 })

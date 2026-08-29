@@ -8,19 +8,13 @@ import {
   extractProductCandidate,
   validateProductCandidate,
 } from "./product-candidate"
+import { productFallbackFromUrl } from "./product-fallback"
 import { validateProductUrl } from "./product-url"
 
 export class DuplicateProductError extends Error {
   constructor() {
     super("This product is already in the catalog")
     this.name = "DuplicateProductError"
-  }
-}
-
-export class ProductImportError extends Error {
-  constructor(message: string, cause: unknown) {
-    super(message, { cause })
-    this.name = "ProductImportError"
   }
 }
 
@@ -50,66 +44,90 @@ export async function importProduct(
   env: Env,
 ): Promise<CatalogProduct> {
   const sourceUrl = validateProductUrl(input).href
-
-  let collected
-
-  try {
-    collected = await collectProductEvidence(sourceUrl, env.BROWSER)
-  } catch (error) {
-    throw new ProductImportError("Could not read this product page", error)
-  }
-
-  const expectedCanonicalUrl =
-    collected.evidence.canonicalUrl ?? collected.evidence.pageUrl
-
-  if (await productExists(env.DB, expectedCanonicalUrl)) {
-    throw new DuplicateProductError()
-  }
-
-  let candidate
+  let details = productFallbackFromUrl(sourceUrl)
+  let imageUrl = ""
+  let importEvidence: unknown = { method: "fallback" }
+  let duplicateChecked = false
 
   try {
-    const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY })
-    const extracted = await extractProductCandidate(openai, collected.evidence)
-    candidate = validateProductCandidate(extracted, collected.evidence)
-  } catch (error) {
-    throw new ProductImportError("Could not extract product details", error)
-  }
+    const collected = await collectProductEvidence(sourceUrl, env.BROWSER)
+    const expectedCanonicalUrl =
+      collected.evidence.canonicalUrl ?? collected.evidence.pageUrl
 
-  let image
+    details = { ...details, canonicalUrl: expectedCanonicalUrl }
+    importEvidence = collected
 
-  try {
-    image = await storeProductImage(
-      candidate.imageUrl,
-      env.IMAGE_BUCKET,
-      env.IMAGES,
-    )
+    if (await productExists(env.DB, expectedCanonicalUrl)) {
+      throw new DuplicateProductError()
+    }
+    duplicateChecked = true
+
+    try {
+      const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY })
+      const extracted = await extractProductCandidate(openai, collected.evidence)
+      const candidate = validateProductCandidate(extracted, collected.evidence)
+
+      details = candidate
+      imageUrl = candidate.imageUrl
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          message: "product details import failed; using URL fallback",
+          sourceUrl,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      )
+    }
   } catch (error) {
+    if (error instanceof DuplicateProductError) throw error
+
     console.error(
       JSON.stringify({
-        message: "product image import failed",
-        imageUrl: candidate.imageUrl,
+        message: "product page import failed; using URL fallback",
+        sourceUrl,
         error: error instanceof Error ? error.message : String(error),
       }),
     )
+  }
 
-    throw new ProductImportError("Could not import the product image", error)
+  if (!duplicateChecked && (await productExists(env.DB, details.canonicalUrl))) {
+    throw new DuplicateProductError()
+  }
+
+  let image = {
+    processedImageKey: "",
+    backgroundRemoved: false,
+    subjectScale: 0.8,
+    subjectPosition: { x: 0.5, y: 0.5 },
+  }
+
+  if (imageUrl) {
+    try {
+      image = await storeProductImage(imageUrl, env.IMAGE_BUCKET, env.IMAGES)
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          message: "product image import failed; saving without an image",
+          imageUrl,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      )
+    }
   }
 
   try {
     return await insertProduct(env.DB, {
       id: crypto.randomUUID(),
       sourceUrl,
-      canonicalUrl: candidate.canonicalUrl,
-      name: candidate.name,
-      brand: candidate.brand,
-      category: candidate.category,
-      originalImageUrl: candidate.imageUrl,
+      ...details,
+      originalImageUrl: image.processedImageKey ? imageUrl : "",
       ...image,
-      importEvidence: collected,
+      importEvidence,
     })
   } catch (error) {
-    await removeFailedImage(env.IMAGE_BUCKET, image.processedImageKey)
+    if (image.processedImageKey) {
+      await removeFailedImage(env.IMAGE_BUCKET, image.processedImageKey)
+    }
 
     if (isCanonicalUrlConflict(error)) throw new DuplicateProductError()
 
