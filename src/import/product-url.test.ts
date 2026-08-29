@@ -53,7 +53,12 @@ describe("fetchProductPage", () => {
     expect(fetcher).toHaveBeenCalledTimes(2)
     expect(fetcher).toHaveBeenCalledWith(
       "https://shop.example.com/start",
-      expect.objectContaining({ redirect: "manual" }),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "user-agent": expect.stringContaining("Mozilla/5.0"),
+        }),
+        redirect: "manual",
+      }),
     )
   })
 

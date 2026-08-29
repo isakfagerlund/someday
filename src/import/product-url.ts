@@ -8,6 +8,8 @@ const blockedDomainSuffixes = [
 
 const redirectStatuses = new Set([301, 302, 303, 307, 308])
 const maxRedirects = 5
+const browserUserAgent =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
 
 export class ProductUrlError extends Error {
   constructor(message: string) {
@@ -75,7 +77,10 @@ export async function fetchPublicResource(
 
   for (let redirectCount = 0; ; redirectCount += 1) {
     const response = await fetcher(url.href, {
-      headers: { accept },
+      headers: {
+        accept,
+        "user-agent": browserUserAgent,
+      },
       redirect: "manual",
     })
 
