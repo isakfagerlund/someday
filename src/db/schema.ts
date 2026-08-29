@@ -3,11 +3,12 @@ import {
   check,
   index,
   integer,
+  real,
   sqliteTable,
   text,
 } from "drizzle-orm/sqlite-core"
 
-import { categories } from "../domain/product"
+import { categories, type SubjectPosition } from "../domain/product"
 
 export const defaultBoardId = "default"
 
@@ -32,7 +33,16 @@ export const products = sqliteTable(
     name: text("name").notNull(),
     brand: text("brand").notNull(),
     category: text("category", { enum: categories }).notNull(),
-    imageKey: text("image_key").notNull(),
+    originalImageUrl: text("original_image_url").notNull().default(""),
+    processedImageKey: text("image_key").notNull(),
+    backgroundRemoved: integer("background_removed", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    subjectScale: real("subject_scale").notNull().default(0.8),
+    subjectPosition: text("subject_position", { mode: "json" })
+      .$type<SubjectPosition>()
+      .notNull()
+      .default(sql`'{"x":0.5,"y":0.5}'`),
     importEvidence: text("import_evidence", { mode: "json" }).notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()

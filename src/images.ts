@@ -2,6 +2,10 @@ import { fetchPublicResource, type ProductFetcher } from "./import/product-url"
 
 const maxSourceBytes = 20_000_000
 const productImageDirectory = "products"
+const subjectScale = 0.8
+const subjectPosition = { x: 0.5, y: 0.5 } as const
+const transparentPixel =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
 
 export const productImageVariants = [
   { width: 360, height: 450 },
@@ -10,6 +14,14 @@ export const productImageVariants = [
 ] as const
 
 type ProductImageWidth = (typeof productImageVariants)[number]["width"]
+type ProductImageVariant = (typeof productImageVariants)[number]
+
+export interface StoredProductImage {
+  processedImageKey: string
+  backgroundRemoved: boolean
+  subjectScale: number
+  subjectPosition: { x: number; y: number }
+}
 
 export class ProductImageError extends Error {
   constructor(message: string) {
@@ -31,6 +43,87 @@ function allImageKeys(imageKey: string) {
     originalKey(imageKey),
     ...productImageVariants.map(({ width }) => variantKey(imageKey, width)),
   ]
+}
+
+function transparentCanvas() {
+  const bytes = Uint8Array.from(atob(transparentPixel), (character) =>
+    character.charCodeAt(0),
+  )
+
+  return new Blob([bytes])
+}
+
+async function renderCutoutVariant(
+  source: Blob,
+  images: ImagesBinding,
+  variant: ProductImageVariant,
+) {
+  const innerWidth = Math.round(variant.width * subjectScale)
+  const innerHeight = Math.round(variant.height * subjectScale)
+  const cutout = images
+    .input(source.stream())
+    .transform({ segment: "foreground" })
+    .transform({ trim: "border" })
+    .transform({
+      width: innerWidth,
+      height: innerHeight,
+      fit: "pad",
+      background: "rgba(0,0,0,0)",
+    })
+
+  return images
+    .input(transparentCanvas().stream())
+    .transform({ ...variant, fit: "squeeze" })
+    .draw(cutout, {
+      left: Math.round((variant.width - innerWidth) * subjectPosition.x),
+      top: Math.round((variant.height - innerHeight) * subjectPosition.y),
+    })
+    .output({ format: "image/webp", quality: 85 })
+}
+
+function renderOriginalVariant(
+  source: Blob,
+  images: ImagesBinding,
+  variant: ProductImageVariant,
+) {
+  return images
+    .input(source.stream())
+    .transform({
+      ...variant,
+      fit: "cover",
+      gravity: "auto",
+      sharpen: 1,
+    })
+    .output({ format: "image/webp", quality: 85 })
+}
+
+async function renderVariants(source: Blob, images: ImagesBinding) {
+  try {
+    const variants = await Promise.all(
+      productImageVariants.map(async (variant) => ({
+        width: variant.width,
+        result: await renderCutoutVariant(source, images, variant),
+      })),
+    )
+
+    return { backgroundRemoved: true, variants }
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        message: "product background removal failed; using original image",
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    )
+
+    const variants = await Promise.all(
+      productImageVariants.map(async (variant) => ({
+        width: variant.width,
+        result: await renderOriginalVariant(source, images, variant),
+      })),
+    )
+
+    return { backgroundRemoved: false, variants }
+  }
 }
 
 async function readImage(response: Response) {
@@ -97,21 +190,7 @@ export async function storeProductImage(
   const sourceContentType = response.headers.get("content-type") ?? undefined
   const source = await readImage(response)
   const imageKey = crypto.randomUUID()
-
-  const variants = await Promise.all(
-    productImageVariants.map(async (variant) => ({
-      width: variant.width,
-      result: await images
-        .input(source.stream())
-        .transform({
-          ...variant,
-          fit: "cover",
-          gravity: "auto",
-          sharpen: 1,
-        })
-        .output({ format: "image/webp", quality: 85 }),
-    })),
-  )
+  const { backgroundRemoved, variants } = await renderVariants(source, images)
 
   const writes = await Promise.allSettled([
     bucket.put(originalKey(imageKey), source, {
@@ -135,14 +214,19 @@ export async function storeProductImage(
     throw failedWrite.reason
   }
 
-  return imageKey
+  return {
+    processedImageKey: imageKey,
+    backgroundRemoved,
+    subjectScale,
+    subjectPosition: { ...subjectPosition },
+  } satisfies StoredProductImage
 }
 
 export function deleteProductImage(bucket: R2Bucket, imageKey: string) {
   return bucket.delete(allImageKeys(imageKey))
 }
 
-function requestedVariant(pathname: string) {
+function requestedImageKeys(pathname: string) {
   const match = pathname.match(/^\/images\/([^/]+)\/(360|720|1080)\.webp$/)
 
   if (!match) return null
@@ -152,7 +236,10 @@ function requestedVariant(pathname: string) {
 
     if (!/^[a-zA-Z0-9_-]+$/.test(imageKey)) return null
 
-    return variantKey(imageKey, Number(match[2]) as ProductImageWidth)
+    return {
+      original: originalKey(imageKey),
+      variant: variantKey(imageKey, Number(match[2]) as ProductImageWidth),
+    }
   } catch {
     return null
   }
@@ -162,11 +249,12 @@ export async function serveProductImage(
   request: Request,
   bucket: R2Bucket,
 ): Promise<Response> {
-  const key = requestedVariant(new URL(request.url).pathname)
+  const keys = requestedImageKeys(new URL(request.url).pathname)
 
-  if (!key) return new Response("Not found", { status: 404 })
+  if (!keys) return new Response("Not found", { status: 404 })
 
-  const image = await bucket.get(key)
+  const image =
+    (await bucket.get(keys.variant)) ?? (await bucket.get(keys.original))
   if (!image) {
     return new Response("Not found", { status: 404 })
   }

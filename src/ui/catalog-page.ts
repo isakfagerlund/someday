@@ -23,7 +23,7 @@ const categoryIcons: Record<Category | "All", string> = {
 
 function renderProductCard(product: CatalogProduct, index: number) {
   const productUrl = escapeHtml(product.sourceUrl)
-  const imageUrl = `/images/${encodeURIComponent(product.imageKey)}`
+  const imageUrl = `/images/${encodeURIComponent(product.processedImageKey)}`
   const name = escapeHtml(product.name)
   const brand = escapeHtml(product.brand)
   const loading =

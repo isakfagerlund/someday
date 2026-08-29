@@ -15,7 +15,11 @@ const catalogProductColumns = {
   name: products.name,
   brand: products.brand,
   category: products.category,
-  imageKey: products.imageKey,
+  originalImageUrl: products.originalImageUrl,
+  processedImageKey: products.processedImageKey,
+  backgroundRemoved: products.backgroundRemoved,
+  subjectScale: products.subjectScale,
+  subjectPosition: products.subjectPosition,
 }
 
 export async function listProducts(
@@ -83,6 +87,6 @@ export async function deleteProduct(database: D1Database, id: string) {
   return createDb(database)
     .delete(products)
     .where(and(eq(products.id, id), eq(products.boardId, defaultBoardId)))
-    .returning({ imageKey: products.imageKey })
+    .returning({ processedImageKey: products.processedImageKey })
     .get()
 }

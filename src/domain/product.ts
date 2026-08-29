@@ -2,13 +2,22 @@ export const categories = ["Clothing", "Accessories", "Tech", "Other"] as const
 
 export type Category = (typeof categories)[number]
 
+export interface SubjectPosition {
+  x: number
+  y: number
+}
+
 export interface CatalogProduct {
   id: string
   sourceUrl: string
   name: string
   brand: string
   category: Category
-  imageKey: string
+  originalImageUrl: string
+  processedImageKey: string
+  backgroundRemoved: boolean
+  subjectScale: number
+  subjectPosition: SubjectPosition
 }
 
 export interface NewProduct extends CatalogProduct {

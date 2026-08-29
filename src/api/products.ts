@@ -130,13 +130,13 @@ export async function handleDeleteProduct(
   if (!deleted) return jsonError("Product not found", 404)
 
   try {
-    await deleteProductImage(env.IMAGE_BUCKET, deleted.imageKey)
+    await deleteProductImage(env.IMAGE_BUCKET, deleted.processedImageKey)
   } catch (error) {
     console.error(
       JSON.stringify({
         message: "failed to delete product image",
         productId,
-        imageKey: deleted.imageKey,
+        processedImageKey: deleted.processedImageKey,
         error: error instanceof Error ? error.message : String(error),
       }),
     )

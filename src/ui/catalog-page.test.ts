@@ -10,7 +10,11 @@ const products: CatalogProduct[] = [
     name: "First product",
     brand: "Example",
     category: "Other",
-    imageKey: "first-image",
+    originalImageUrl: "https://shop.example.com/first.jpg",
+    processedImageKey: "first-image",
+    backgroundRemoved: true,
+    subjectScale: 0.8,
+    subjectPosition: { x: 0.5, y: 0.5 },
   },
   {
     id: "second",
@@ -18,7 +22,11 @@ const products: CatalogProduct[] = [
     name: "Second product",
     brand: "Example",
     category: "Other",
-    imageKey: "second-image",
+    originalImageUrl: "https://shop.example.com/second.jpg",
+    processedImageKey: "second-image",
+    backgroundRemoved: false,
+    subjectScale: 0.8,
+    subjectPosition: { x: 0.5, y: 0.5 },
   },
 ]
 

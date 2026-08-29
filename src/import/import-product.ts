@@ -24,14 +24,14 @@ export class ProductImportError extends Error {
   }
 }
 
-async function removeFailedImage(bucket: R2Bucket, imageKey: string) {
+async function removeFailedImage(bucket: R2Bucket, processedImageKey: string) {
   try {
-    await deleteProductImage(bucket, imageKey)
+    await deleteProductImage(bucket, processedImageKey)
   } catch (error) {
     console.error(
       JSON.stringify({
         message: "failed to clean up product image",
-        imageKey,
+        processedImageKey,
         error: error instanceof Error ? error.message : String(error),
       }),
     )
@@ -76,10 +76,10 @@ export async function importProduct(
     throw new ProductImportError("Could not extract product details", error)
   }
 
-  let imageKey
+  let image
 
   try {
-    imageKey = await storeProductImage(
+    image = await storeProductImage(
       candidate.imageUrl,
       env.IMAGE_BUCKET,
       env.IMAGES,
@@ -104,11 +104,12 @@ export async function importProduct(
       name: candidate.name,
       brand: candidate.brand,
       category: candidate.category,
-      imageKey,
+      originalImageUrl: candidate.imageUrl,
+      ...image,
       importEvidence: collected,
     })
   } catch (error) {
-    await removeFailedImage(env.IMAGE_BUCKET, imageKey)
+    await removeFailedImage(env.IMAGE_BUCKET, image.processedImageKey)
 
     if (isCanonicalUrlConflict(error)) throw new DuplicateProductError()
 

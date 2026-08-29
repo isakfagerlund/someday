@@ -246,10 +246,12 @@
   }
 
   .product-card__image {
+    --product-image-background: var(--color-surface);
+
     display: block;
     overflow: hidden;
     aspect-ratio: 4 / 5;
-    background: var(--color-surface);
+    background: var(--product-image-background);
     border-radius: 8px;
   }
 
