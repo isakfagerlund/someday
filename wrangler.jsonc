@@ -1,0 +1,42 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "someday",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "cache": {
+    "enabled": true
+  },
+  "secrets": {
+    "required": ["OPENAI_API_KEY"]
+  },
+  "assets": {
+    "directory": "./public/"
+  },
+  "browser": {
+    "binding": "BROWSER",
+    "remote": true
+  },
+  "images": {
+    "binding": "IMAGES",
+    "remote": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "someday",
+      "database_id": "d5c9a3e9-0dab-4af6-a38d-e19425aec28e",
+      "migrations_dir": "drizzle",
+      "migrations_pattern": "drizzle/*/migration.sql"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "IMAGE_BUCKET",
+      "bucket_name": "someday-images"
+    }
+  ]
+}

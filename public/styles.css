@@ -1,0 +1,433 @@
+@layer reset, tokens, base, layout, components, utilities, transitions;
+
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body,
+  h1,
+  h2,
+  p,
+  ul {
+    margin: 0;
+  }
+
+  ul {
+    padding: 0;
+  }
+}
+
+@layer tokens {
+  :root {
+    color-scheme: light dark;
+    --color-bg: #f7f7f4;
+    --color-surface: #ffffff;
+    --color-text: #171714;
+    --color-muted: #6f6f68;
+    --color-border: #deded7;
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --radius-pill: 999px;
+    --width-page: 82rem;
+    --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #171714;
+      --color-surface: #20201d;
+      --color-text: #f7f7f4;
+      --color-muted: #aaa9a0;
+      --color-border: #393934;
+    }
+  }
+}
+
+@layer base {
+  body {
+    min-height: 100vh;
+    color: var(--color-text);
+    background: var(--color-bg);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  h1,
+  h2 {
+    line-height: 1.1;
+    letter-spacing: -0.035em;
+  }
+
+  h1 {
+    font-size: clamp(2.5rem, 7vw, 5.5rem);
+    font-weight: 550;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+}
+
+@layer layout {
+  .wrapper {
+    width: min(100% - 2rem, var(--width-page));
+    margin-inline: auto;
+  }
+
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+}
+
+@layer components {
+  .site-header {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .site-header__inner {
+    display: flex;
+    align-items: center;
+    min-height: 4.5rem;
+  }
+
+  .wordmark {
+    font-size: 1.125rem;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    text-decoration: none;
+  }
+
+  .catalog {
+    gap: var(--space-8);
+    padding-block: clamp(var(--space-12), 9vw, 7rem);
+  }
+
+  .catalog__heading {
+    gap: var(--space-3);
+    max-width: 48rem;
+  }
+
+  .catalog__heading p,
+  .empty-state p {
+    color: var(--color-muted);
+  }
+
+  .import-form {
+    display: flex;
+    max-width: 48rem;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .import-form label {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .import-form__fields {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .import-form input {
+    min-width: 0;
+    flex: 1;
+    padding: 0.7rem var(--space-4);
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+  }
+
+  .import-form button {
+    padding: 0.7rem var(--space-6);
+    color: var(--color-bg);
+    background: var(--color-text);
+    border: 1px solid var(--color-text);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+  }
+
+  .import-form button:hover {
+    opacity: 0.82;
+  }
+
+  .import-form input:focus-visible,
+  .import-form button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+  }
+
+  .import-status {
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+
+  .filter-list {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    list-style: none;
+    scrollbar-width: none;
+  }
+
+  .filter-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter {
+    display: block;
+    padding: 0.55rem var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+    text-decoration: none;
+  }
+
+  .filter:hover {
+    background: var(--color-surface);
+  }
+
+  .filter[aria-current="page"] {
+    color: var(--color-bg);
+    background: var(--color-text);
+    border-color: var(--color-text);
+  }
+
+  .filter:focus-visible,
+  .wordmark:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 20rem;
+    padding: var(--space-12) var(--space-4);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    text-align: center;
+  }
+
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-8) var(--space-4);
+    list-style: none;
+  }
+
+  .product-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    text-decoration: none;
+  }
+
+  .product-card__image {
+    display: block;
+    overflow: hidden;
+    aspect-ratio: 4 / 5;
+    background: var(--color-surface);
+  }
+
+  .product-card__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 240ms ease;
+  }
+
+  .product-card__details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .product-card__brand {
+    color: var(--color-muted);
+    font-size: 0.8125rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .product-card__name {
+    font-size: 1rem;
+    font-weight: 550;
+    letter-spacing: -0.015em;
+  }
+
+  .product-card:hover .product-card__image img {
+    transform: scale(1.015);
+  }
+
+  .product-card:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 4px;
+  }
+
+  .product {
+    position: relative;
+  }
+
+  .product__edit {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    padding: 0.45rem var(--space-3);
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+  }
+
+  .product-dialog {
+    width: min(100% - 2rem, 30rem);
+    padding: 0;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+  }
+
+  .product-dialog::backdrop {
+    background: rgb(0 0 0 / 0.45);
+  }
+
+  .product-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-6);
+  }
+
+  .product-form__heading,
+  .product-form__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .product-form__heading {
+    margin-bottom: var(--space-4);
+  }
+
+  .product-form label {
+    margin-top: var(--space-2);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .product-form input,
+  .product-form select {
+    width: 100%;
+    padding: 0.65rem var(--space-3);
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+  }
+
+  .product-form__actions {
+    margin-top: var(--space-6);
+  }
+
+  .product-form button {
+    cursor: pointer;
+  }
+
+  .text-button,
+  .danger-button {
+    padding: 0;
+    color: var(--color-muted);
+    background: transparent;
+    border: 0;
+  }
+
+  .danger-button {
+    color: #b42318;
+  }
+
+  .primary-button {
+    padding: 0.65rem var(--space-6);
+    color: var(--color-bg);
+    background: var(--color-text);
+    border: 1px solid var(--color-text);
+    border-radius: var(--radius-pill);
+  }
+
+  .product-form__error {
+    margin-top: var(--space-2);
+    color: #b42318;
+    font-size: 0.875rem;
+  }
+
+  .product__edit:focus-visible,
+  .product-form button:focus-visible,
+  .product-form input:focus-visible,
+  .product-form select:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+  }
+}
+
+@layer transitions {
+  @view-transition {
+    navigation: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    @view-transition {
+      navigation: none;
+    }
+  }
+}
+
+@media (min-width: 48rem) {
+  @layer layout {
+    .wrapper {
+      width: min(100% - 4rem, var(--width-page));
+    }
+  }
+
+  @layer components {
+    .product-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap-inline: var(--space-6);
+    }
+  }
+}
+
+@media (min-width: 70rem) {
+  @layer components {
+    .product-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+}

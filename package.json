@@ -1,0 +1,29 @@
+{
+  "name": "someday",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "db:generate": "drizzle-kit generate",
+    "db:check": "drizzle-kit check",
+    "db:migrate:local": "wrangler d1 migrations apply someday --local",
+    "test": "vitest run",
+    "types": "wrangler types",
+    "types:check": "wrangler types --check",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run types:check && npm run typecheck && npm run db:check && npm test"
+  },
+  "dependencies": {
+    "drizzle-orm": "1.0.0-rc.4",
+    "openai": "^7.8.0",
+    "zod": "^4.5.2"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.1.2",
+    "@types/node": "^26.4.0",
+    "drizzle-kit": "1.0.0-rc.4",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.127.1"
+  }
+}
