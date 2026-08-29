@@ -1,6 +1,6 @@
 # ADR 0009: No user concept in version one
 
-Status: Accepted
+Status: Superseded by ADR 0014
 
 ## Context
 

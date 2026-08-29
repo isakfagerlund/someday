@@ -1,6 +1,6 @@
 # ADR 0010: Public unauthenticated mutation API
 
-Status: Accepted
+Status: Superseded by ADR 0014
 
 ## Context
 

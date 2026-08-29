@@ -1,6 +1,6 @@
 # ADR 0006: One invisible default board
 
-Status: Accepted
+Status: Superseded by ADR 0014
 
 ## Context
 
