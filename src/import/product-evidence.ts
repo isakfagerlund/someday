@@ -56,7 +56,7 @@ function normalizedText(value: string) {
 
 function resolvedPublicUrl(value: string, baseUrl: URL) {
   try {
-    return validateProductUrl(new URL(value, baseUrl))
+    return validateProductUrl(new URL(value.replaceAll("&amp;", "&"), baseUrl))
   } catch {
     return null
   }

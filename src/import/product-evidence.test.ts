@@ -82,6 +82,19 @@ describe("extractProductEvidence", () => {
     )
   })
 
+  it("decodes image URL query parameters from HTML attributes", async () => {
+    const response = new Response(
+      `<img src="/lamp.jpg?width=1200&amp;height=900">`,
+      { headers: { "content-type": "text/html" } },
+    )
+
+    const evidence = await extractProductEvidence(response, pageUrl)
+
+    expect(evidence.images[0]?.url).toBe(
+      "https://shop.example.com/lamp.jpg?width=1200&height=900",
+    )
+  })
+
   it("rejects a declared body over the size limit", async () => {
     const response = new Response("<html></html>", {
       headers: {
