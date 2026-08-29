@@ -5,6 +5,10 @@ const productDialog = document.querySelector("#product-dialog")
 const productForm = document.querySelector("#product-form")
 const errorMessage = productForm?.querySelector("[role='alert']")
 
+document
+  .querySelector(".filter[aria-current='page']")
+  ?.scrollIntoView({ block: "nearest", inline: "center" })
+
 function showError(message) {
   if (!errorMessage) return
 
