@@ -85,6 +85,14 @@ export async function importProduct(
       env.IMAGES,
     )
   } catch (error) {
+    console.error(
+      JSON.stringify({
+        message: "product image import failed",
+        imageUrl: candidate.imageUrl,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    )
+
     throw new ProductImportError("Could not import the product image", error)
   }
 
