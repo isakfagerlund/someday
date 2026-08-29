@@ -109,23 +109,63 @@
   }
 
   .catalog__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: var(--space-3);
-    max-width: 48rem;
   }
 
-  .catalog__heading p,
   .empty-state p {
     color: var(--color-muted);
   }
 
+  .add-product-button {
+    display: grid;
+    width: 3rem;
+    height: 3rem;
+    padding: 0;
+    place-items: center;
+    color: var(--color-bg);
+    background: var(--color-text);
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    translate: 0 0.125rem;
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+
+  .add-product-button svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    fill: currentColor;
+  }
+
+  .add-product-button:hover {
+    opacity: 0.82;
+    transform: scale(1.04);
+  }
+
   .import-form {
     display: flex;
-    max-width: 48rem;
     flex-direction: column;
-    gap: var(--space-2);
+    padding: var(--space-6);
+  }
+
+  .import-form__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+  }
+
+  .import-form__intro {
+    margin-bottom: var(--space-6);
+    color: var(--color-muted);
   }
 
   .import-form label {
+    margin-bottom: var(--space-2);
     font-size: 0.875rem;
     font-weight: 600;
   }
@@ -137,16 +177,18 @@
 
   .import-form input {
     min-width: 0;
+    height: 2.75rem;
     flex: 1;
-    padding: 0.7rem var(--space-4);
+    padding-inline: var(--space-4);
     color: var(--color-text);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-pill);
   }
 
-  .import-form button {
-    padding: 0.7rem var(--space-6);
+  .import-form__submit {
+    height: 2.75rem;
+    padding-inline: var(--space-6);
     color: var(--color-bg);
     background: var(--color-text);
     border: 1px solid var(--color-text);
@@ -154,10 +196,16 @@
     cursor: pointer;
   }
 
-  .import-form button:hover {
+  .import-form__submit:hover {
     opacity: 0.82;
   }
 
+  .import-form__submit:disabled {
+    opacity: 0.65;
+    cursor: wait;
+  }
+
+  .add-product-button:focus-visible,
   .import-form input:focus-visible,
   .import-form button:focus-visible {
     outline: 2px solid currentColor;
@@ -165,6 +213,7 @@
   }
 
   .import-status {
+    margin-top: var(--space-3);
     color: var(--color-muted);
     font-size: 0.875rem;
   }
@@ -188,7 +237,7 @@
     padding: 0.375rem 1.25rem;
     color: var(--color-muted);
     border: 1px solid var(--color-border);
-    border-radius: 16px;
+    border-radius: 10px;
     white-space: nowrap;
     text-decoration: none;
   }
@@ -306,16 +355,21 @@
     cursor: pointer;
   }
 
+  .import-dialog,
   .product-dialog {
     width: min(100% - 2rem, 30rem);
     padding: 0;
     color: var(--color-text);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
+    border-radius: 16px;
+    box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 0.2);
   }
 
+  .import-dialog::backdrop,
   .product-dialog::backdrop {
-    background: rgb(0 0 0 / 0.45);
+    background: rgb(0 0 0 / 0.32);
+    backdrop-filter: blur(10px);
   }
 
   .product-form {
@@ -360,7 +414,31 @@
     cursor: pointer;
   }
 
-  .text-button,
+  .dialog-close {
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    place-items: center;
+    color: var(--color-muted);
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: color 160ms ease, background-color 160ms ease;
+  }
+
+  .dialog-close svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: currentColor;
+  }
+
+  .dialog-close:hover {
+    color: var(--color-text);
+    background: var(--color-bg);
+  }
+
   .danger-button {
     padding: 0;
     color: var(--color-muted);
@@ -387,6 +465,7 @@
   }
 
   .product__edit:focus-visible,
+  .dialog-close:focus-visible,
   .product-form button:focus-visible,
   .product-form input:focus-visible,
   .product-form select:focus-visible {
@@ -396,11 +475,37 @@
 }
 
 @layer transitions {
+  dialog[open] {
+    animation: dialog-in 160ms ease-out;
+  }
+
+  dialog[open]::backdrop {
+    animation: backdrop-in 160ms ease-out;
+  }
+
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem) scale(0.98);
+    }
+  }
+
+  @keyframes backdrop-in {
+    from {
+      opacity: 0;
+    }
+  }
+
   @view-transition {
     navigation: auto;
   }
 
   @media (prefers-reduced-motion: reduce) {
+    dialog[open],
+    dialog[open]::backdrop {
+      animation: none;
+    }
+
     @view-transition {
       navigation: none;
     }

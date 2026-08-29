@@ -1,7 +1,9 @@
 export const catalogScript = String.raw`
-const dialog = document.querySelector("#product-dialog")
-const form = document.querySelector("#product-form")
-const errorMessage = form?.querySelector("[role='alert']")
+const importDialog = document.querySelector("#import-dialog")
+const importForm = document.querySelector("#import-form")
+const productDialog = document.querySelector("#product-dialog")
+const productForm = document.querySelector("#product-form")
+const errorMessage = productForm?.querySelector("[role='alert']")
 
 function showError(message) {
   if (!errorMessage) return
@@ -14,24 +16,36 @@ document.addEventListener("click", async (event) => {
   const button =
     event.target instanceof Element ? event.target.closest("button") : null
 
-  if (!button || !dialog || !form || !errorMessage) return
+  if (!button) return
 
-  if (button.matches("[data-edit-product]")) {
-    form.elements.id.value = button.dataset.productId
-    form.elements.name.value = button.dataset.productName
-    form.elements.brand.value = button.dataset.productBrand
-    form.elements.category.value = button.dataset.productCategory
-    errorMessage.hidden = true
-    dialog.showModal()
+  if (button.matches("[data-open-import-dialog]") && importDialog) {
+    importDialog.showModal()
+    return
   }
 
-  if (button.matches("[data-close-dialog]")) dialog.close()
+  if (button.matches("[data-close-import-dialog]") && importDialog) {
+    importDialog.close()
+    return
+  }
+
+  if (!productDialog || !productForm || !errorMessage) return
+
+  if (button.matches("[data-edit-product]")) {
+    productForm.elements.id.value = button.dataset.productId
+    productForm.elements.name.value = button.dataset.productName
+    productForm.elements.brand.value = button.dataset.productBrand
+    productForm.elements.category.value = button.dataset.productCategory
+    errorMessage.hidden = true
+    productDialog.showModal()
+  }
+
+  if (button.matches("[data-close-dialog]")) productDialog.close()
 
   if (
     button.matches("[data-delete-product]") &&
     confirm("Delete this product?")
   ) {
-    const response = await fetch(\`/api/products/\${form.elements.id.value}\`, {
+    const response = await fetch("/api/products/" + productForm.elements.id.value, {
       method: "DELETE",
     })
 
@@ -41,19 +55,36 @@ document.addEventListener("click", async (event) => {
   }
 })
 
-form?.addEventListener("submit", async (event) => {
+importDialog?.addEventListener("click", (event) => {
+  if (event.target === importDialog) importDialog.close()
+})
+
+importForm?.addEventListener("submit", () => {
+  const submitButton = importForm.querySelector("[type='submit']")
+
+  importForm.setAttribute("aria-busy", "true")
+
+  if (submitButton instanceof HTMLButtonElement) {
+    submitButton.disabled = true
+    submitButton.textContent = "Adding…"
+  }
+})
+
+if (importDialog?.hasAttribute("data-open-on-load")) importDialog.showModal()
+
+productForm?.addEventListener("submit", async (event) => {
   event.preventDefault()
   if (!errorMessage) return
 
   errorMessage.hidden = true
 
-  const response = await fetch(\`/api/products/\${form.elements.id.value}\`, {
+  const response = await fetch("/api/products/" + productForm.elements.id.value, {
     method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      name: form.elements.name.value,
-      brand: form.elements.brand.value,
-      category: form.elements.category.value,
+      name: productForm.elements.name.value,
+      brand: productForm.elements.brand.value,
+      category: productForm.elements.category.value,
     }),
   })
 

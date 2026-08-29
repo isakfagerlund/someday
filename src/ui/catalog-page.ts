@@ -21,6 +21,8 @@ const categoryIcons: Record<Category | "All", string> = {
   Other: `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M216,56H176V48a24,24,0,0,0-24-24H104A24,24,0,0,0,80,48v8H40A16,16,0,0,0,24,72V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V72A16,16,0,0,0,216,56ZM96,48a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96ZM216,72v41.61A184,184,0,0,1,128,136a184.07,184.07,0,0,1-88-22.38V72Zm0,128H40V131.64A200.19,200.19,0,0,0,128,152a200.25,200.25,0,0,0,88-20.37V200ZM104,112a8,8,0,0,1,8-8h32a8,8,0,0,1,0,16H112A8,8,0,0,1,104,112Z"/></svg>`,
 }
 
+const closeIcon = `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128l66.35,66.34A8,8,0,0,1,205.66,194.34Z"/></svg>`
+
 function renderProductCard(product: CatalogProduct, index: number) {
   const productUrl = escapeHtml(product.sourceUrl)
   const imageUrl = `/images/${encodeURIComponent(product.processedImageKey)}`
@@ -88,6 +90,7 @@ export function renderCatalogPage({
   const status = importMessage
     ? `<p class="import-status" role="status">${importMessage}</p>`
     : ""
+  const openImportDialog = importMessage ? " data-open-on-load" : ""
 
   return `<!doctype html>
 <html lang="en">
@@ -100,10 +103,35 @@ export function renderCatalogPage({
   </head>
   <body>
     <main class="wrapper catalog stack">
-      <div class="catalog__heading stack">
+      <div class="catalog__heading">
         <h1>someday</h1>
+        <button
+          class="add-product-button"
+          type="button"
+          aria-label="Add product"
+          data-open-import-dialog>
+          <svg viewBox="0 0 256 256" aria-hidden="true">
+            <path d="M216,128a8,8,0,0,1-8,8H136v72a8,8,0,0,1-16,0V136H48a8,8,0,0,1,0-16h72V48a8,8,0,0,1,16,0v72h72A8,8,0,0,1,216,128Z"/>
+          </svg>
+        </button>
       </div>
-      <form class="import-form" action="/api/products" method="post">
+      <nav aria-label="Product categories">
+        <ul class="filter-list" role="list">${filters}</ul>
+      </nav>
+      ${catalog}
+    </main>
+    <dialog class="import-dialog" id="import-dialog" aria-labelledby="import-dialog-title"${openImportDialog}>
+      <form class="import-form" id="import-form" action="/api/products" method="post">
+        <div class="import-form__heading">
+          <h2 id="import-dialog-title">Add product</h2>
+          <button
+            class="dialog-close"
+            type="button"
+            aria-label="Close add product dialog"
+            data-close-import-dialog>${closeIcon}</button>
+        </div>
+        <p class="import-form__intro">Paste a link and we'll do the rest</p>
+        <label for="product-url">Product URL</label>
         <div class="import-form__fields">
           <input
             id="product-url"
@@ -112,21 +140,22 @@ export function renderCatalogPage({
             inputmode="url"
             autocomplete="url"
             placeholder="https://shop.example/product"
+            autofocus
             required>
-          <button type="submit">Add product</button>
+          <button class="import-form__submit" type="submit">Add product</button>
         </div>
         ${status}
       </form>
-      <nav aria-label="Product categories">
-        <ul class="filter-list" role="list">${filters}</ul>
-      </nav>
-      ${catalog}
-    </main>
-    <dialog class="product-dialog" id="product-dialog">
+    </dialog>
+    <dialog class="product-dialog" id="product-dialog" aria-labelledby="product-dialog-title">
       <form class="product-form" id="product-form">
         <div class="product-form__heading">
-          <h2>Edit product</h2>
-          <button class="text-button" type="button" data-close-dialog>Close</button>
+          <h2 id="product-dialog-title">Edit product</h2>
+          <button
+            class="dialog-close"
+            type="button"
+            aria-label="Close edit product dialog"
+            data-close-dialog>${closeIcon}</button>
         </div>
         <input id="edit-product-id" name="id" type="hidden">
         <label for="edit-product-name">Name</label>
