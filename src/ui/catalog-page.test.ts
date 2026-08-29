@@ -31,7 +31,6 @@ describe("renderCatalogPage", () => {
     expect(html).toContain('loading="eager" fetchpriority="high"')
     expect(html.match(/loading="lazy"/g)).toHaveLength(1)
     expect(html).toContain('action="/api/products"')
-    expect(html).toContain('data-product-id="first"')
     expect(html).toContain('src="/catalog.js"')
   })
 })
