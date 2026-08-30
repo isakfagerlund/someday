@@ -50,6 +50,7 @@ document.addEventListener("click", async (event) => {
     confirm("Delete this product?")
   ) {
     const response = await fetch("/api/products/" + productForm.elements.id.value, {
+      credentials: "include",
       method: "DELETE",
     })
 
@@ -83,6 +84,7 @@ productForm?.addEventListener("submit", async (event) => {
   errorMessage.hidden = true
 
   const response = await fetch("/api/products/" + productForm.elements.id.value, {
+    credentials: "include",
     method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
