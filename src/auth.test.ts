@@ -91,6 +91,24 @@ describe("authenticateRequest", () => {
     )
   })
 
+  it("finishes a signed-in handshake with Clerk's redirect", async () => {
+    mocks.authenticateRequest.mockResolvedValue({
+      headers: new Headers({ location: "http://localhost:8787/isak" }),
+      isAuthenticated: true,
+      status: "signed-in",
+    })
+
+    const result = await authenticateRequest(
+      new Request("http://localhost:8787/isak?__clerk_handshake=token"),
+      env,
+    )
+
+    expect(result.response?.status).toBe(307)
+    expect(result.response?.headers.get("location")).toBe(
+      "http://localhost:8787/isak",
+    )
+  })
+
   it("uses the user's email when their Clerk profile has no name", async () => {
     mocks.createClerkClient.mockReturnValue({
       users: {

@@ -1,10 +1,12 @@
 import type { Board } from "../db/boards"
 import { reservedBoardSlugs } from "../domain/board"
+import { renderApiClientScripts } from "./api-client-script"
 import { escapeHtml } from "./html"
 
 interface HomePageProps {
   boardStatus?: string | null
   boards: Board[]
+  clerkPublishableKey: string
   ownerBoard?: Board
   signInUrl: string
   userName: string | null
@@ -13,6 +15,7 @@ interface HomePageProps {
 export function renderHomePage({
   boardStatus,
   boards,
+  clerkPublishableKey,
   ownerBoard,
   signInUrl,
   userName,
@@ -31,10 +34,11 @@ export function renderHomePage({
     action = `<span class="home-user">${escapeHtml(userName)}</span>`
   }
 
-  const error =
+  const errorMessage =
     boardStatus === "invalid"
-      ? `<p class="product-form__error" role="alert">Enter a name with at least one letter or number.</p>`
+      ? "Enter a name with at least one letter or number."
       : ""
+  const error = `<p class="product-form__error" data-board-error role="alert"${errorMessage ? "" : " hidden"}>${errorMessage}</p>`
   const unavailableSlugs = [
     ...reservedBoardSlugs,
     ...boards.map((board) => board.slug),
@@ -56,7 +60,7 @@ export function renderHomePage({
         </div>
       </form>
     </dialog>
-    <script type="module" src="/home.js"></script>`
+    ${renderApiClientScripts(clerkPublishableKey, "/home.js")}`
       : ""
 
   return `<!doctype html>

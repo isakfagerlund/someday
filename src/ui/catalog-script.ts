@@ -1,19 +1,22 @@
 export const catalogScript = String.raw`
+import { apiRequest } from "/api-client.js"
+
 const importDialog = document.querySelector("#import-dialog")
 const importForm = document.querySelector("#import-form")
+const importError = importForm?.querySelector("[data-import-error]")
 const productDialog = document.querySelector("#product-dialog")
 const productForm = document.querySelector("#product-form")
-const errorMessage = productForm?.querySelector("[role='alert']")
+const productError = productForm?.querySelector("[role='alert']")
 
 document
   .querySelector(".filter[aria-current='page']")
   ?.scrollIntoView({ block: "nearest", inline: "center" })
 
-function showError(message) {
-  if (!errorMessage) return
+function showError(element, error, fallback) {
+  if (!element) return
 
-  errorMessage.textContent = message
-  errorMessage.hidden = false
+  element.textContent = error instanceof Error ? error.message : fallback
+  element.hidden = false
 }
 
 document.addEventListener("click", async (event) => {
@@ -32,14 +35,14 @@ document.addEventListener("click", async (event) => {
     return
   }
 
-  if (!productDialog || !productForm || !errorMessage) return
+  if (!productDialog || !productForm || !productError) return
 
   if (button.matches("[data-edit-product]")) {
     productForm.elements.id.value = button.dataset.productId
     productForm.elements.name.value = button.dataset.productName
     productForm.elements.brand.value = button.dataset.productBrand
     productForm.elements.category.value = button.dataset.productCategory
-    errorMessage.hidden = true
+    productError.hidden = true
     productDialog.showModal()
   }
 
@@ -49,14 +52,15 @@ document.addEventListener("click", async (event) => {
     button.matches("[data-delete-product]") &&
     confirm("Delete this product?")
   ) {
-    const response = await fetch("/api/products/" + productForm.elements.id.value, {
-      credentials: "include",
-      method: "DELETE",
-    })
+    try {
+      await apiRequest("/api/products/" + productForm.elements.id.value, {
+        method: "DELETE",
+      })
 
-    if (!response.ok) return showError("The product could not be deleted.")
-
-    location.reload()
+      location.reload()
+    } catch (error) {
+      showError(productError, error, "The product could not be deleted.")
+    }
   }
 })
 
@@ -64,14 +68,35 @@ importDialog?.addEventListener("click", (event) => {
   if (event.target === importDialog) importDialog.close()
 })
 
-importForm?.addEventListener("submit", () => {
-  const submitButton = importForm.querySelector("[type='submit']")
+importForm?.addEventListener("submit", async (event) => {
+  event.preventDefault()
+  if (!importError) return
 
+  const submitButton = importForm.querySelector("[type='submit']")
+  importError.hidden = true
   importForm.setAttribute("aria-busy", "true")
 
   if (submitButton instanceof HTMLButtonElement) {
     submitButton.disabled = true
     submitButton.textContent = "Adding…"
+  }
+
+  try {
+    await apiRequest("/api/products", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: importForm.elements.url.value }),
+    })
+
+    location.reload()
+  } catch (error) {
+    showError(importError, error, "The product could not be added.")
+    importForm.removeAttribute("aria-busy")
+
+    if (submitButton instanceof HTMLButtonElement) {
+      submitButton.disabled = false
+      submitButton.textContent = "Add product"
+    }
   }
 })
 
@@ -79,23 +104,25 @@ if (importDialog?.hasAttribute("data-open-on-load")) importDialog.showModal()
 
 productForm?.addEventListener("submit", async (event) => {
   event.preventDefault()
-  if (!errorMessage) return
+  if (!productError) return
 
-  errorMessage.hidden = true
+  productError.hidden = true
 
-  const response = await fetch("/api/products/" + productForm.elements.id.value, {
-    credentials: "include",
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      name: productForm.elements.name.value,
-      brand: productForm.elements.brand.value,
-      category: productForm.elements.category.value,
-    }),
-  })
+  try {
+    await apiRequest("/api/products/" + productForm.elements.id.value, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: productForm.elements.name.value,
+        brand: productForm.elements.brand.value,
+        category: productForm.elements.category.value,
+      }),
+    })
 
-  if (!response.ok) return showError("The product could not be saved.")
-
-  location.reload()
+    location.reload()
+  } catch (error) {
+    showError(productError, error, "The product could not be saved.")
+  }
 })
+
 `

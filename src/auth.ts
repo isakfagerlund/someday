@@ -28,11 +28,16 @@ export async function authenticateRequest(
     authorizedParties: [new URL(request.url).origin],
     jwtKey: env.CLERK_JWT_KEY,
   })
+  const location = state.headers.get("location")
 
-  if (state.status === "handshake") {
+  if (location) {
     return {
       response: new Response(null, { status: 307, headers: state.headers }),
     }
+  }
+
+  if (state.status === "handshake") {
+    throw new Error("Clerk handshake did not include a redirect")
   }
 
   return {

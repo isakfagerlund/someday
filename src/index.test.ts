@@ -37,6 +37,10 @@ const board = {
   clerkOwnerId: "user_owner",
 }
 
+const clerkEnv = {
+  CLERK_PUBLISHABLE_KEY: "pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk",
+} as Env
+
 const product = {
   id: "product-id",
   sourceUrl: "https://shop.example/product",
@@ -77,7 +81,7 @@ describe("board access", () => {
   it("keeps the anonymous board public and free of management code", async () => {
     const response = await worker.fetch(
       new Request("https://someday.example/isaks-board"),
-      {} as Env,
+      clerkEnv,
       {} as ExecutionContext,
     )
     const html = await response.text()
@@ -94,7 +98,7 @@ describe("board access", () => {
 
     const response = await worker.fetch(
       new Request("https://someday.example/isaks-board"),
-      {} as Env,
+      clerkEnv,
       {} as ExecutionContext,
     )
     const html = await response.text()
@@ -110,7 +114,7 @@ describe("board access", () => {
 
     const response = await worker.fetch(
       new Request("https://someday.example/isaks-board"),
-      {} as Env,
+      clerkEnv,
       {} as ExecutionContext,
     )
     const html = await response.text()
@@ -125,7 +129,7 @@ describe("board access", () => {
 
     const response = await worker.fetch(
       new Request("https://someday.example/"),
-      {} as Env,
+      clerkEnv,
       {} as ExecutionContext,
     )
     const html = await response.text()
@@ -146,7 +150,7 @@ describe("board access", () => {
 
     const response = await worker.fetch(
       new Request("https://someday.example/"),
-      {} as Env,
+      clerkEnv,
       {} as ExecutionContext,
     )
     const html = await response.text()
@@ -186,6 +190,23 @@ describe("board access", () => {
         clerkOwnerId: "user_other",
       }),
     )
+  })
+
+  it("returns the new board slug to the authenticated client", async () => {
+    setUser("user_other")
+
+    const response = await worker.fetch(
+      new Request("https://someday.example/api/boards", {
+        method: "POST",
+        body: JSON.stringify({ name: "Night Finds" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { DB: {} } as Env,
+      {} as ExecutionContext,
+    )
+
+    expect(response.status).toBe(201)
+    await expect(response.json()).resolves.toEqual({ slug: "night-finds" })
   })
 
   it("rejects an anonymous mutation", async () => {

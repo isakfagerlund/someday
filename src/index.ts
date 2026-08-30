@@ -21,6 +21,7 @@ import { isCategory } from "./domain/product"
 import { serveProductImage } from "./images"
 import { renderCatalogPage } from "./ui/catalog-page"
 import { catalogScript } from "./ui/catalog-script"
+import { apiClientScript } from "./ui/api-client-script"
 import { homeScript } from "./ui/home-script"
 import { renderHomePage } from "./ui/home-page"
 
@@ -114,6 +115,7 @@ async function handleHtmlRequest(request: Request, env: Env) {
     const html = renderHomePage({
       boardStatus: url.searchParams.get("board"),
       boards,
+      clerkPublishableKey: env.CLERK_PUBLISHABLE_KEY,
       ownerBoard,
       signInUrl,
       userName,
@@ -158,6 +160,7 @@ async function handleHtmlRequest(request: Request, env: Env) {
     activeCategory,
     board,
     canManage,
+    clerkPublishableKey: env.CLERK_PUBLISHABLE_KEY,
     importStatus: canManage ? url.searchParams.get("import") : null,
     products,
   })
@@ -189,6 +192,15 @@ async function handleRequest(
 
   if (url.pathname === "/catalog.js" && request.method === "GET") {
     return new Response(catalogScript, {
+      headers: {
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-type": "text/javascript; charset=utf-8",
+      },
+    })
+  }
+
+  if (url.pathname === "/api-client.js" && request.method === "GET") {
+    return new Response(apiClientScript, {
       headers: {
         "cache-control": "public, max-age=0, must-revalidate",
         "content-type": "text/javascript; charset=utf-8",

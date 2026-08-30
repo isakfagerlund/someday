@@ -5,6 +5,7 @@ import {
   type Category,
 } from "../domain/product"
 import { escapeHtml } from "./html"
+import { renderApiClientScripts } from "./api-client-script"
 
 const categoryIcons: Record<Category | "All", string> = {
   All: `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M104,40H56A16,16,0,0,0,40,56v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,104,40Zm0,64H56V56h48v48Zm96-64H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm0,64H152V56h48v48Zm-96,32H56a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,104,136Zm0,64H56V152h48v48Zm96-64H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,200,136Zm0,64H152V152h48v48Z"/></svg>`,
@@ -27,6 +28,7 @@ interface CatalogPageProps {
   activeCategory: Category | null
   board: Board
   canManage: boolean
+  clerkPublishableKey: string
   importStatus?: string | null
   products: CatalogProduct[]
 }
@@ -111,6 +113,7 @@ function renderImportDialog(openOnLoad: boolean, status: string) {
           <input id="product-url" name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://shop.example/product" autofocus required>
           <button class="import-form__submit" type="submit">Add product</button>
         </div>
+        <p class="import-status product-form__error" data-import-error role="alert" hidden></p>
         ${status}
       </form>
     </dialog>`
@@ -145,6 +148,7 @@ export function renderCatalogPage({
   activeCategory,
   board,
   canManage,
+  clerkPublishableKey,
   importStatus,
   products,
 }: CatalogPageProps) {
@@ -177,7 +181,7 @@ export function renderCatalogPage({
   const managementHtml = canManage
     ? `${renderImportDialog(Boolean(importMessage), status)}
     ${renderProductDialog()}
-    <script type="module" src="/catalog.js"></script>`
+    ${renderApiClientScripts(clerkPublishableKey, "/catalog.js")}`
     : ""
   const addButton = canManage
     ? `<button class="add-product-button" type="button" aria-label="Add product" data-open-import-dialog>

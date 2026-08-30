@@ -1,7 +1,11 @@
 export const homeScript = String.raw`
+import { apiRequest } from "/api-client.js"
+
 const boardDialog = document.querySelector("#board-dialog")
+const boardForm = boardDialog?.querySelector("form")
 const boardNameInput = document.querySelector("#board-name")
 const boardSlugPreview = document.querySelector("[data-board-slug-preview]")
+const boardError = document.querySelector("[data-board-error]")
 const unavailableSlugs = new Set(
   (boardDialog?.dataset.unavailableSlugs ?? "").split(","),
 )
@@ -32,4 +36,25 @@ function updateBoardSlugPreview() {
 if (boardDialog && !boardDialog.open) boardDialog.showModal()
 boardNameInput?.addEventListener("input", updateBoardSlugPreview)
 updateBoardSlugPreview()
+
+boardForm?.addEventListener("submit", async (event) => {
+  event.preventDefault()
+  if (!boardError || !boardNameInput) return
+
+  boardError.hidden = true
+
+  try {
+    const board = await apiRequest("/api/boards", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: boardNameInput.value }),
+    })
+
+    location.assign("/" + encodeURIComponent(board.slug))
+  } catch (error) {
+    boardError.textContent =
+      error instanceof Error ? error.message : "The board could not be created."
+    boardError.hidden = false
+  }
+})
 `
