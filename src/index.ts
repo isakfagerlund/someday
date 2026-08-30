@@ -1,3 +1,4 @@
+import { handleCreateBoard } from "./api/boards"
 import {
   handleCreateProduct,
   handleDeleteProduct,
@@ -15,19 +16,13 @@ import {
 } from "./catalog-cache"
 import { getBoardByOwnerId, getBoardBySlug, listBoards } from "./db/boards"
 import { listProducts } from "./db/products"
+import { reservedBoardSlugs } from "./domain/board"
 import { isCategory } from "./domain/product"
 import { serveProductImage } from "./images"
 import { renderCatalogPage } from "./ui/catalog-page"
 import { catalogScript } from "./ui/catalog-script"
+import { homeScript } from "./ui/home-script"
 import { renderHomePage } from "./ui/home-page"
-
-const reservedBoardSlugs = new Set([
-  "api",
-  "auth",
-  "catalog",
-  "health",
-  "images",
-])
 
 function jsonError(error: string, status: number) {
   return Response.json(
@@ -117,6 +112,7 @@ async function handleHtmlRequest(request: Request, env: Env) {
       ? await getUserDisplayName(userId, env).catch(() => "Signed in")
       : null
     const html = renderHomePage({
+      boardStatus: url.searchParams.get("board"),
       boards,
       ownerBoard,
       signInUrl,
@@ -200,6 +196,15 @@ async function handleRequest(
     })
   }
 
+  if (url.pathname === "/home.js" && request.method === "GET") {
+    return new Response(homeScript, {
+      headers: {
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-type": "text/javascript; charset=utf-8",
+      },
+    })
+  }
+
   if (
     url.pathname.startsWith("/images/") &&
     (request.method === "GET" || request.method === "HEAD")
@@ -209,6 +214,19 @@ async function handleRequest(
 
   if (url.pathname === "/api/products" && request.method === "POST") {
     return handleMutation(request, env, ctx)
+  }
+
+  if (url.pathname === "/api/boards" && request.method === "POST") {
+    const auth = await authenticateRequest(request, env)
+
+    if (auth.response) return auth.response
+
+    const { headers, userId } = auth.request
+    const response = userId
+      ? await handleCreateBoard(request, userId, env, ctx)
+      : jsonError("Unauthorized", 401)
+
+    return addAuthHeaders(response, headers)
   }
 
   const productRoute = url.pathname.match(/^\/api\/products\/([^/]+)$/)

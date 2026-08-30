@@ -39,6 +39,21 @@ export function getBoardByOwnerId(database: D1Database, ownerId: string) {
     .get()
 }
 
+export async function insertBoard(
+  database: D1Database,
+  board: Pick<Board, "id" | "name" | "slug" | "clerkOwnerId">,
+): Promise<Board> {
+  const created = await createDb(database)
+    .insert(boards)
+    .values(board)
+    .returning(boardColumns)
+    .get()
+
+  if (!created) throw new Error("D1 did not return the created board")
+
+  return created
+}
+
 export function getProductBoard(database: D1Database, productId: string) {
   return createDb(database)
     .select({

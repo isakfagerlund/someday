@@ -21,8 +21,8 @@ paste-the-base64-body-here
 -----END PUBLIC KEY-----"
 ```
 
-Apply the local migration, then replace the seeded owner placeholder with the
-Clerk user ID that owns the board:
+If you want to keep the seeded board, replace its owner placeholder with the
+Clerk user ID that owns it:
 
 ```sh
 npx wrangler d1 execute someday --local --command \
@@ -78,7 +78,8 @@ one as follows:
 4. Copy the Secret key, Publishable key, and PEM JWT public key into the Worker
    secrets listed above. Keep all three PEM lines inside the quoted
    `CLERK_JWT_KEY` value. Do not use the JWKS URL or JSON document.
-5. Copy the owner's Clerk `user_...` ID into D1:
+5. If you want to keep the seeded board, copy its owner's Clerk `user_...` ID
+   into D1:
 
    ```sh
    npx wrangler d1 execute someday --remote --command \
@@ -92,5 +93,5 @@ one as follows:
    the former catalog to the board list.
 
 The seeded board uses `/isaks-board`. Change its `name` or `slug` directly in D1
-if needed. New boards are manually inserted into `boards` with an ID, name,
-unique slug, and Clerk owner ID.
+if needed. Invited users without a board are prompted for a board name after
+sign-in. The application creates their board and derives its unique public slug.

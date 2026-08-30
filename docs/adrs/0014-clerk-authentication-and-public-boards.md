@@ -19,9 +19,10 @@ Use Clerk for authentication, with Sign in with Apple as the first sign-in
 method. Use Clerk's hosted Account Portal instead of building a login page. Use
 `@clerk/backend` in the Worker to verify sessions and read the Clerk user ID.
 
-Keep access invite-only while boards are created manually. Do not add an
-application user table, Clerk webhooks, roles, Organizations, or board creation
-UI for the first implementation.
+Keep access invite-only. When an authenticated user does not own a board, ask
+for a board name in a dialog and create their board. Derive a unique public slug
+from the name. Do not add an application user table, Clerk webhooks, roles, or
+Organizations for the first implementation.
 
 ### Routes
 
@@ -44,9 +45,9 @@ management navigation.
 Add a unique public slug and a Clerk owner ID to each board. Use Clerk's user ID
 directly as the owner ID. Do not copy Clerk profile data into D1.
 
-The first implementation supports one owner per board and manually provisioned
-boards. It does not support shared ownership, invitations managed by the app,
-roles, board switching controls, or board settings.
+The first implementation supports one owner and one board per Clerk user. It
+does not support shared ownership, invitations managed by the app, roles, board
+switching controls, or board settings.
 
 ### Board interface
 
@@ -99,24 +100,27 @@ page.
 2. Add the board slug and Clerk owner ID migration. Assign the existing default
    board to its owner and give it a public slug.
 3. Add the home page and route board requests by slug.
-4. Add one Worker authentication helper using `@clerk/backend`, networkless JWT
+4. Prompt authenticated users without a board for a name and create the board
+   with a unique derived slug.
+5. Add one Worker authentication helper using `@clerk/backend`, networkless JWT
    verification, and an explicit `authorizedParties` list.
-5. Pass `canManage` into the board renderer and omit all management HTML and
+6. Pass `canManage` into the board renderer and omit all management HTML and
    JavaScript when it is false.
-6. Protect product creation, update, and deletion with board ownership checks.
-7. Add the Cloudflare authenticated-cookie cache bypass and make authenticated
+7. Protect product creation, update, and deletion with board ownership checks.
+8. Add the Cloudflare authenticated-cookie cache bypass and make authenticated
    HTML private and uncacheable.
-8. Verify the anonymous cached view, owner view, non-owner view, login redirect,
+9. Verify the anonymous cached view, owner view, non-owner view, login redirect,
    and mutation authorization. Rely on types for the remaining coverage.
 
 ## Consequences
 
-- The home page has one purpose: choose a board or log in.
+- The home page lists public boards, provides login, and onboards a signed-in
+  user who does not have a board.
 - Public board pages stay focused on products.
 - Owners manage products in place through the add button and product edit icon.
 - Anonymous traffic keeps the existing cache-first path.
 - Signed-in page requests run the Worker and do not use shared HTML cache.
 - Board ownership becomes application data, while Clerk remains the source of
   identity.
-- Adding shared boards, self-service board creation, profiles, or roles requires
-  a later decision.
+- Adding shared boards, multiple boards per user, profiles, or roles requires a
+  later decision.

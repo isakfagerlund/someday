@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   authenticateRequest: vi.fn(),
+  insertBoard: vi.fn(),
   getBoardByOwnerId: vi.fn(),
   getBoardBySlug: vi.fn(),
   getUserDisplayName: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock("./db/boards", () => ({
   getBoardByOwnerId: mocks.getBoardByOwnerId,
   getBoardBySlug: mocks.getBoardBySlug,
   getProductBoard: vi.fn(),
+  insertBoard: mocks.insertBoard,
   listBoards: mocks.listBoards,
 }))
 vi.mock("./db/products", () => ({
@@ -63,7 +65,11 @@ describe("board access", () => {
     vi.clearAllMocks()
     setUser(null)
     mocks.getBoardBySlug.mockResolvedValue(board)
+    mocks.getBoardByOwnerId.mockResolvedValue(undefined)
     mocks.getUserDisplayName.mockResolvedValue("Isak")
+    mocks.insertBoard.mockImplementation(
+      async (_database: D1Database, newBoard: typeof board) => newBoard,
+    )
     mocks.listBoards.mockResolvedValue([board])
     mocks.listProducts.mockResolvedValue([product])
   })
@@ -114,7 +120,7 @@ describe("board access", () => {
     expect(html).not.toContain("/catalog.js")
   })
 
-  it("shows a signed-in user on the home page without requiring a board", async () => {
+  it("asks a signed-in user without a board to create one", async () => {
     setUser("user_other")
 
     const response = await worker.fetch(
@@ -125,7 +131,57 @@ describe("board access", () => {
     const html = await response.text()
 
     expect(html).toContain('<span class="home-user">Isak</span>')
+    expect(html).toContain('<dialog class="board-dialog"')
+    expect(html).toContain('action="/api/boards"')
+    expect(html).toContain('/home.js')
     expect(html).not.toContain(">Sign in</a>")
+  })
+
+  it("links an owner to their board without showing onboarding", async () => {
+    setUser("user_owner")
+
+    const response = await worker.fetch(
+      new Request("https://someday.example/"),
+      {} as Env,
+      {} as ExecutionContext,
+    )
+    const html = await response.text()
+
+    expect(html).toContain(
+      '<a class="home-user" href="/isaks-board">Isak</a>',
+    )
+    expect(html).not.toContain('<dialog class="board-dialog"')
+    expect(html).not.toContain('/home.js')
+  })
+
+  it("creates a board with a unique slug and redirects to it", async () => {
+    setUser("user_other")
+    mocks.listBoards.mockResolvedValue([
+      board,
+      { ...board, id: "another", slug: "cafe-finds" },
+    ])
+
+    const response = await worker.fetch(
+      new Request("https://someday.example/api/boards", {
+        method: "POST",
+        body: new URLSearchParams({ name: "Café Finds" }),
+      }),
+      { DB: {} } as Env,
+      {} as ExecutionContext,
+    )
+
+    expect(response.status).toBe(303)
+    expect(response.headers.get("location")).toBe(
+      "https://someday.example/cafe-finds-2",
+    )
+    expect(mocks.insertBoard).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({
+        name: "Café Finds",
+        slug: "cafe-finds-2",
+        clerkOwnerId: "user_other",
+      }),
+    )
   })
 
   it("rejects an anonymous mutation", async () => {
