@@ -1,6 +1,7 @@
 export const catalogScript = String.raw`
 const importDialog = document.querySelector("#import-dialog")
 const importForm = document.querySelector("#import-form")
+const productUrlInput = document.querySelector("#product-url")
 const productDialog = document.querySelector("#product-dialog")
 const productForm = document.querySelector("#product-form")
 const errorMessage = productForm?.querySelector("[role='alert']")
@@ -61,6 +62,10 @@ document.addEventListener("click", async (event) => {
 
 importDialog?.addEventListener("click", (event) => {
   if (event.target === importDialog) importDialog.close()
+})
+
+productUrlInput?.addEventListener("paste", () => {
+  setTimeout(() => importForm?.requestSubmit())
 })
 
 importForm?.addEventListener("submit", () => {
