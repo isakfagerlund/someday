@@ -1,4 +1,5 @@
 import type { Board } from "../db/boards"
+import { reservedBoardSlugs } from "../domain/board"
 import { escapeHtml } from "./html"
 
 interface HomePageProps {
@@ -34,16 +35,21 @@ export function renderHomePage({
     boardStatus === "invalid"
       ? `<p class="product-form__error" role="alert">Enter a name with at least one letter or number.</p>`
       : ""
+  const unavailableSlugs = [
+    ...reservedBoardSlugs,
+    ...boards.map((board) => board.slug),
+  ].join(",")
   const onboarding =
     userName && !ownerBoard
-      ? `<dialog class="board-dialog" id="board-dialog" aria-labelledby="board-dialog-title">
+      ? `<dialog class="board-dialog" id="board-dialog" aria-labelledby="board-dialog-title" data-unavailable-slugs="${escapeHtml(unavailableSlugs)}">
       <form class="product-form" action="/api/boards" method="post">
         <div class="product-form__heading">
           <h2 id="board-dialog-title">Create your board</h2>
         </div>
         <p class="board-dialog__intro">Choose a name. We'll use it to make your board's URL.</p>
         <label for="board-name">Board name</label>
-        <input id="board-name" name="name" maxlength="80" autofocus required>
+        <input id="board-name" name="name" maxlength="80" aria-describedby="board-url-preview" autofocus required>
+        <p class="board-url-preview" id="board-url-preview">Your board will be at <span>https://someday.fyi/<strong data-board-slug-preview>your-board</strong></span></p>
         ${error}
         <div class="product-form__actions board-form__actions">
           <button class="primary-button" type="submit">Create board</button>

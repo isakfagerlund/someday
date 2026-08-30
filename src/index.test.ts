@@ -132,7 +132,11 @@ describe("board access", () => {
 
     expect(html).toContain('<span class="home-user">Isak</span>')
     expect(html).toContain('<dialog class="board-dialog"')
+    expect(html).toContain('data-unavailable-slugs="api,auth,catalog,health,images,isaks-board"')
     expect(html).toContain('action="/api/boards"')
+    expect(html).toContain(
+      'https://someday.fyi/<strong data-board-slug-preview>your-board</strong>',
+    )
     expect(html).toContain('/home.js')
     expect(html).not.toContain(">Sign in</a>")
   })

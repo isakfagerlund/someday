@@ -459,6 +459,16 @@
     color: var(--color-muted);
   }
 
+  .board-url-preview {
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+
+  .board-url-preview span {
+    overflow-wrap: anywhere;
+    color: var(--color-text);
+  }
+
   .product-form label {
     margin-top: var(--space-2);
     font-size: 0.875rem;
