@@ -16,7 +16,9 @@ Local development uses these values in `.dev.vars`:
 OPENAI_API_KEY=your-key
 CLERK_SECRET_KEY=sk_test_...
 CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_JWT_KEY="-----BEGIN PUBLIC KEY-----..."
+CLERK_JWT_KEY="-----BEGIN PUBLIC KEY-----
+paste-the-base64-body-here
+-----END PUBLIC KEY-----"
 ```
 
 Apply the local migration, then replace the seeded owner placeholder with the
@@ -50,7 +52,9 @@ For the first deployment, put the key in an ignored `.env.production` file:
 OPENAI_API_KEY=your-key
 CLERK_SECRET_KEY=sk_live_...
 CLERK_PUBLISHABLE_KEY=pk_live_...
-CLERK_JWT_KEY="-----BEGIN PUBLIC KEY-----..."
+CLERK_JWT_KEY="-----BEGIN PUBLIC KEY-----
+paste-the-base64-body-here
+-----END PUBLIC KEY-----"
 ```
 
 Then bootstrap the Worker and its secret together:
@@ -71,8 +75,9 @@ one as follows:
    `<app-origin>/auth/redirect`.
 3. Enable Apple as a social connection. Production Apple login also needs an
    Apple Services ID, Team ID, Key ID, and private key.
-4. Copy the Secret key, Publishable key, and JWT public key into the Worker
-   secrets listed above.
+4. Copy the Secret key, Publishable key, and PEM JWT public key into the Worker
+   secrets listed above. Keep all three PEM lines inside the quoted
+   `CLERK_JWT_KEY` value. Do not use the JWKS URL or JSON document.
 5. Copy the owner's Clerk `user_...` ID into D1:
 
    ```sh
