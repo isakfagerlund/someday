@@ -3,7 +3,11 @@ import {
   handleDeleteProduct,
   handleUpdateProduct,
 } from "./api/products"
-import { addAuthHeaders, authenticateRequest } from "./auth"
+import {
+  addAuthHeaders,
+  authenticateRequest,
+  getUserDisplayName,
+} from "./auth"
 import {
   boardCacheHeaders,
   homeCacheHeaders,
@@ -109,10 +113,14 @@ async function handleHtmlRequest(request: Request, env: Env) {
     const ownerBoard = userId
       ? boards.find((board) => board.clerkOwnerId === userId)
       : undefined
+    const userName = userId
+      ? await getUserDisplayName(userId, env).catch(() => "Signed in")
+      : null
     const html = renderHomePage({
       boards,
       ownerBoard,
       signInUrl,
+      userName,
     })
 
     return addAuthHeaders(

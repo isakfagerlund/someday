@@ -9,7 +9,11 @@ vi.mock("@clerk/backend", () => ({
   createClerkClient: mocks.createClerkClient,
 }))
 
-import { addAuthHeaders, authenticateRequest } from "./auth"
+import {
+  addAuthHeaders,
+  authenticateRequest,
+  getUserDisplayName,
+} from "./auth"
 
 const publishableKey =
   "pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk"
@@ -84,6 +88,22 @@ describe("authenticateRequest", () => {
     expect(result.response?.status).toBe(307)
     expect(result.response?.headers.get("location")).toBe(
       "https://clerk.example/handshake",
+    )
+  })
+
+  it("uses the user's email when their Clerk profile has no name", async () => {
+    mocks.createClerkClient.mockReturnValue({
+      users: {
+        getUser: vi.fn().mockResolvedValue({
+          fullName: null,
+          primaryEmailAddress: { emailAddress: "isak@example.com" },
+          username: null,
+        }),
+      },
+    })
+
+    await expect(getUserDisplayName("user_owner", env)).resolves.toBe(
+      "isak@example.com",
     )
   })
 

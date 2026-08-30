@@ -5,12 +5,14 @@ interface HomePageProps {
   boards: Board[]
   ownerBoard?: Board
   signInUrl: string
+  userName: string | null
 }
 
 export function renderHomePage({
   boards,
   ownerBoard,
   signInUrl,
+  userName,
 }: HomePageProps) {
   const boardLinks = boards
     .map(
@@ -18,9 +20,13 @@ export function renderHomePage({
         `<li><a class="board-link" href="/${encodeURIComponent(board.slug)}">${escapeHtml(board.name)}</a></li>`,
     )
     .join("")
-  const action = ownerBoard
-    ? `<a class="home-action" href="/${encodeURIComponent(ownerBoard.slug)}">Open your board</a>`
-    : `<a class="home-action" href="${escapeHtml(signInUrl)}">Sign in</a>`
+  let action = `<a class="home-action" href="${escapeHtml(signInUrl)}">Sign in</a>`
+
+  if (userName && ownerBoard) {
+    action = `<a class="home-user" href="/${encodeURIComponent(ownerBoard.slug)}">${escapeHtml(userName)}</a>`
+  } else if (userName) {
+    action = `<span class="home-user">${escapeHtml(userName)}</span>`
+  }
 
   return `<!doctype html>
 <html lang="en">

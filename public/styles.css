@@ -128,6 +128,11 @@
     text-decoration: none;
   }
 
+  .home-user {
+    font-weight: 550;
+    text-decoration: none;
+  }
+
   .board-list {
     display: grid;
     gap: var(--space-3);
@@ -522,6 +527,7 @@
 
   .product__edit:focus-visible,
   .home-action:focus-visible,
+  .home-user:focus-visible,
   .board-link:focus-visible,
   .board-title:focus-visible,
   .dialog-close:focus-visible,

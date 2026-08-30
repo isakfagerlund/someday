@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   authenticateRequest: vi.fn(),
   getBoardByOwnerId: vi.fn(),
   getBoardBySlug: vi.fn(),
+  getUserDisplayName: vi.fn(),
   listBoards: vi.fn(),
   listProducts: vi.fn(),
 }))
@@ -11,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("./auth", () => ({
   addAuthHeaders: (response: Response) => response,
   authenticateRequest: mocks.authenticateRequest,
+  getUserDisplayName: mocks.getUserDisplayName,
 }))
 vi.mock("./db/boards", () => ({
   getBoardByOwnerId: mocks.getBoardByOwnerId,
@@ -61,6 +63,7 @@ describe("board access", () => {
     vi.clearAllMocks()
     setUser(null)
     mocks.getBoardBySlug.mockResolvedValue(board)
+    mocks.getUserDisplayName.mockResolvedValue("Isak")
     mocks.listBoards.mockResolvedValue([board])
     mocks.listProducts.mockResolvedValue([product])
   })
@@ -109,6 +112,20 @@ describe("board access", () => {
     expect(response.headers.get("cache-control")).toBe("private, no-store")
     expect(html).not.toContain("data-open-import-dialog")
     expect(html).not.toContain("/catalog.js")
+  })
+
+  it("shows a signed-in user on the home page without requiring a board", async () => {
+    setUser("user_other")
+
+    const response = await worker.fetch(
+      new Request("https://someday.example/"),
+      {} as Env,
+      {} as ExecutionContext,
+    )
+    const html = await response.text()
+
+    expect(html).toContain('<span class="home-user">Isak</span>')
+    expect(html).not.toContain(">Sign in</a>")
   })
 
   it("rejects an anonymous mutation", async () => {

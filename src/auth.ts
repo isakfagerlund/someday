@@ -11,15 +11,19 @@ export type RequestAuth =
   | { request: AuthenticatedRequest; response?: never }
   | { request?: never; response: Response }
 
-export async function authenticateRequest(
-  request: Request,
-  env: Env,
-): Promise<RequestAuth> {
-  const clerk = createClerkClient({
+function createClerk(env: Env) {
+  return createClerkClient({
     jwtKey: env.CLERK_JWT_KEY,
     publishableKey: env.CLERK_PUBLISHABLE_KEY,
     secretKey: env.CLERK_SECRET_KEY,
   })
+}
+
+export async function authenticateRequest(
+  request: Request,
+  env: Env,
+): Promise<RequestAuth> {
+  const clerk = createClerk(env)
   const state = await clerk.authenticateRequest(request, {
     authorizedParties: [new URL(request.url).origin],
     jwtKey: env.CLERK_JWT_KEY,
@@ -45,6 +49,17 @@ export async function authenticateRequest(
       userId: state.isAuthenticated ? state.toAuth().userId : null,
     },
   }
+}
+
+export async function getUserDisplayName(userId: string, env: Env) {
+  const user = await createClerk(env).users.getUser(userId)
+
+  return (
+    user.fullName ??
+    user.username ??
+    user.primaryEmailAddress?.emailAddress ??
+    "Signed in"
+  )
 }
 
 export function addAuthHeaders(response: Response, authHeaders: Headers) {
