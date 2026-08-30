@@ -99,4 +99,18 @@ describe("authenticateRequest", () => {
       "__client_uat=two; Path=/",
     ])
   })
+
+  it("does not append Clerk's temporary redirect to the app redirect", () => {
+    const authHeaders = new Headers({
+      location: "http://localhost:8787/auth/redirect",
+      "x-clerk-auth-status": "signed-in",
+    })
+    const response = addAuthHeaders(
+      new Response(null, { status: 303, headers: { location: "/" } }),
+      authHeaders,
+    )
+
+    expect(response.headers.get("location")).toBe("/")
+    expect(response.headers.get("x-clerk-auth-status")).toBe("signed-in")
+  })
 })

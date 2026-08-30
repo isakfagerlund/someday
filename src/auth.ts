@@ -53,7 +53,7 @@ export function addAuthHeaders(response: Response, authHeaders: Headers) {
   const headers = new Headers(response.headers)
 
   for (const [name, value] of authHeaders) {
-    if (name !== "set-cookie") headers.append(name, value)
+    if (name !== "set-cookie" && !headers.has(name)) headers.set(name, value)
   }
 
   for (const cookie of authHeaders.getSetCookie()) {
