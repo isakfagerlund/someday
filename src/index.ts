@@ -51,15 +51,6 @@ function getBoardSlug(pathname: string) {
   return slug
 }
 
-function createSignInUrl(signInUrl: string, request: Request) {
-  const url = new URL(signInUrl)
-  url.searchParams.set(
-    "redirect_url",
-    new URL("/auth/redirect", request.url).href,
-  )
-  return url.href
-}
-
 async function handleMutation(
   request: Request,
   env: Env,
@@ -121,7 +112,7 @@ async function handleHtmlRequest(request: Request, env: Env) {
     const html = renderHomePage({
       boards,
       ownerBoard,
-      signInUrl: createSignInUrl(signInUrl, request),
+      signInUrl,
     })
 
     return addAuthHeaders(

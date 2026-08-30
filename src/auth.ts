@@ -1,4 +1,5 @@
 import { createClerkClient } from "@clerk/backend"
+import { createRedirect } from "@clerk/backend/internal"
 
 interface AuthenticatedRequest {
   headers: Headers
@@ -33,7 +34,14 @@ export async function authenticateRequest(
   return {
     request: {
       headers: state.headers,
-      signInUrl: state.signInUrl,
+      signInUrl: createRedirect({
+        baseUrl: request.url,
+        publishableKey: env.CLERK_PUBLISHABLE_KEY,
+        redirectAdapter: (url) => url,
+        signInUrl: state.signInUrl,
+      }).redirectToSignIn({
+        returnBackUrl: new URL("/auth/redirect", request.url),
+      }),
       userId: state.isAuthenticated ? state.toAuth().userId : null,
     },
   }
