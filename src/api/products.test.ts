@@ -1,4 +1,14 @@
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+const mocks = vi.hoisted(() => ({
+  getBoardByOwnerId: vi.fn(),
+  getProductBoard: vi.fn(),
+}))
+
+vi.mock("../db/boards", () => ({
+  getBoardByOwnerId: mocks.getBoardByOwnerId,
+  getProductBoard: mocks.getProductBoard,
+}))
 
 import {
   handleCreateProduct,
@@ -7,6 +17,16 @@ import {
 } from "./products"
 
 describe("handleCreateProduct", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getBoardByOwnerId.mockResolvedValue({
+      id: "default",
+      name: "someday",
+      slug: "isaks-board",
+      clerkOwnerId: "user_owner",
+    })
+  })
+
   it("rejects malformed input before using any bindings", async () => {
     const request = new Request("https://someday.example/api/products", {
       method: "POST",
@@ -16,6 +36,7 @@ describe("handleCreateProduct", () => {
 
     const response = await handleCreateProduct(
       request,
+      "user_owner",
       {} as Env,
       {} as ExecutionContext,
     )
@@ -35,6 +56,7 @@ describe("handleCreateProduct", () => {
 
     const response = await handleCreateProduct(
       request,
+      "user_owner",
       {} as Env,
       {} as ExecutionContext,
     )
@@ -53,19 +75,21 @@ describe("handleCreateProduct", () => {
 
     const response = await handleCreateProduct(
       request,
+      "user_owner",
       {} as Env,
       {} as ExecutionContext,
     )
 
     expect(response.status).toBe(303)
     expect(response.headers.get("location")).toBe(
-      "https://someday.example/?import=invalid",
+      "https://someday.example/isaks-board?import=invalid",
     )
   })
 
   it("rejects a malformed delete ID before using any bindings", async () => {
     const response = await handleDeleteProduct(
       "not-a-product-id",
+      "user_owner",
       {} as Env,
       {} as ExecutionContext,
     )
@@ -86,10 +110,41 @@ describe("handleCreateProduct", () => {
     const response = await handleUpdateProduct(
       request,
       "00000000-0000-4000-8000-000000000000",
+      "user_owner",
       {} as Env,
       {} as ExecutionContext,
     )
 
     expect(response.status).toBe(400)
+  })
+
+  it("rejects an update from a user who does not own the product board", async () => {
+    mocks.getProductBoard.mockResolvedValue({
+      boardId: "other-board",
+      boardSlug: "other-board",
+      clerkOwnerId: "user_other",
+    })
+    const productId = "00000000-0000-4000-8000-000000000000"
+    const request = new Request(
+      `https://someday.example/api/products/${productId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ name: "Changed" }),
+        headers: { "content-type": "application/json" },
+      },
+    )
+
+    const response = await handleUpdateProduct(
+      request,
+      productId,
+      "user_owner",
+      {} as Env,
+      {} as ExecutionContext,
+    )
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toEqual({
+      error: "You do not own this board",
+    })
   })
 })

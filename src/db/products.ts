@@ -7,7 +7,7 @@ import type {
   ProductUpdates,
 } from "../domain/product"
 import { createDb } from "./index"
-import { defaultBoardId, products } from "./schema"
+import { products } from "./schema"
 
 const catalogProductColumns = {
   id: products.id,
@@ -24,10 +24,11 @@ const catalogProductColumns = {
 
 export async function listProducts(
   database: D1Database,
+  boardId: string,
   category: Category | null,
 ): Promise<CatalogProduct[]> {
   const filters = [
-    eq(products.boardId, defaultBoardId),
+    eq(products.boardId, boardId),
     category ? eq(products.category, category) : undefined,
   ]
 
@@ -41,12 +42,18 @@ export async function listProducts(
 
 export async function productExists(
   database: D1Database,
+  boardId: string,
   canonicalUrl: string,
 ) {
   const product = await createDb(database)
     .select({ id: products.id })
     .from(products)
-    .where(eq(products.canonicalUrl, canonicalUrl))
+    .where(
+      and(
+        eq(products.boardId, boardId),
+        eq(products.canonicalUrl, canonicalUrl),
+      ),
+    )
     .get()
 
   return Boolean(product)
@@ -54,13 +61,14 @@ export async function productExists(
 
 export async function insertProduct(
   database: D1Database,
+  boardId: string,
   product: NewProduct,
 ): Promise<CatalogProduct> {
   const created = await createDb(database)
     .insert(products)
     .values({
       ...product,
-      boardId: defaultBoardId,
+      boardId,
     })
     .returning(catalogProductColumns)
     .get()
@@ -73,20 +81,25 @@ export async function insertProduct(
 export async function updateProduct(
   database: D1Database,
   id: string,
+  boardId: string,
   updates: ProductUpdates,
 ): Promise<CatalogProduct | undefined> {
   return createDb(database)
     .update(products)
     .set({ ...updates, updatedAt: new Date() })
-    .where(and(eq(products.id, id), eq(products.boardId, defaultBoardId)))
+    .where(and(eq(products.id, id), eq(products.boardId, boardId)))
     .returning(catalogProductColumns)
     .get()
 }
 
-export async function deleteProduct(database: D1Database, id: string) {
+export async function deleteProduct(
+  database: D1Database,
+  id: string,
+  boardId: string,
+) {
   return createDb(database)
     .delete(products)
-    .where(and(eq(products.id, id), eq(products.boardId, defaultBoardId)))
+    .where(and(eq(products.id, id), eq(products.boardId, boardId)))
     .returning({ processedImageKey: products.processedImageKey })
     .get()
 }
