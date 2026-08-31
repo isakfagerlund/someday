@@ -4,6 +4,7 @@ import { apiRequest } from "/api-client.js"
 const importDialog = document.querySelector("#import-dialog")
 const importForm = document.querySelector("#import-form")
 const importError = importForm?.querySelector("[data-import-error]")
+const productUrlInput = document.querySelector("#product-url")
 const productDialog = document.querySelector("#product-dialog")
 const productForm = document.querySelector("#product-form")
 const productError = productForm?.querySelector("[role='alert']")
@@ -66,6 +67,10 @@ document.addEventListener("click", async (event) => {
 
 importDialog?.addEventListener("click", (event) => {
   if (event.target === importDialog) importDialog.close()
+})
+
+productUrlInput?.addEventListener("paste", () => {
+  setTimeout(() => importForm?.requestSubmit())
 })
 
 importForm?.addEventListener("submit", async (event) => {
