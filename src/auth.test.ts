@@ -74,6 +74,26 @@ describe("authenticateRequest", () => {
     )
   })
 
+  it("uses HTTPS for a public sign-in redirect", async () => {
+    mocks.authenticateRequest.mockResolvedValue({
+      headers: new Headers(),
+      isAuthenticated: false,
+      signInUrl: "",
+      status: "signed-out",
+    })
+
+    const request = new Request("http://someday.fyi/")
+    const result = await authenticateRequest(request, env)
+
+    expect(mocks.authenticateRequest).toHaveBeenCalledWith(request, {
+      authorizedParties: ["https://someday.fyi"],
+      jwtKey: "jwt-key",
+    })
+    expect(result.request?.signInUrl).toBe(
+      "https://example.accounts.dev/sign-in?redirect_url=https%3A%2F%2Fsomeday.fyi%2Fauth%2Fredirect",
+    )
+  })
+
   it("returns Clerk's handshake redirect", async () => {
     mocks.authenticateRequest.mockResolvedValue({
       headers: new Headers({ location: "https://clerk.example/handshake" }),

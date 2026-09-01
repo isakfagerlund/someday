@@ -19,13 +19,24 @@ function createClerk(env: Env) {
   })
 }
 
+function getAppUrl(request: Request) {
+  const url = new URL(request.url)
+
+  if (url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
+    url.protocol = "https:"
+  }
+
+  return url
+}
+
 export async function authenticateRequest(
   request: Request,
   env: Env,
 ): Promise<RequestAuth> {
   const clerk = createClerk(env)
+  const appUrl = getAppUrl(request)
   const state = await clerk.authenticateRequest(request, {
-    authorizedParties: [new URL(request.url).origin],
+    authorizedParties: [appUrl.origin],
     jwtKey: env.CLERK_JWT_KEY,
   })
   const location = state.headers.get("location")
@@ -44,12 +55,12 @@ export async function authenticateRequest(
     request: {
       headers: state.headers,
       signInUrl: createRedirect({
-        baseUrl: request.url,
+        baseUrl: appUrl.href,
         publishableKey: env.CLERK_PUBLISHABLE_KEY,
         redirectAdapter: (url) => url,
         signInUrl: state.signInUrl,
       }).redirectToSignIn({
-        returnBackUrl: new URL("/auth/redirect", request.url),
+        returnBackUrl: new URL("/auth/redirect", appUrl),
       }),
       userId: state.isAuthenticated ? state.toAuth().userId : null,
     },

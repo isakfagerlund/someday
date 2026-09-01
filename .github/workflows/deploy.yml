@@ -49,5 +49,7 @@ jobs:
         run: |
           test -n "$PRODUCTION_URL"
           curl --fail --silent --show-error --retry 5 --retry-all-errors "${PRODUCTION_URL%/}/health"
+          home_page="$(curl --fail --silent --show-error --retry 5 --retry-all-errors "${PRODUCTION_URL%/}/")"
+          ! grep -q 'redirect_url=http%3A' <<< "$home_page"
         env:
           PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}

@@ -145,6 +145,19 @@ describe("board access", () => {
     expect(html).not.toContain(">Sign in</a>")
   })
 
+  it("loads Clerk before an anonymous user signs in", async () => {
+    const response = await worker.fetch(
+      new Request("https://someday.example/"),
+      clerkEnv,
+      {} as ExecutionContext,
+    )
+    const html = await response.text()
+
+    expect(html).toContain("data-sign-in")
+    expect(html).toContain("clerk.browser.js")
+    expect(html).toContain('/home.js')
+  })
+
   it("links an owner to their board without showing onboarding", async () => {
     setUser("user_owner")
 

@@ -1,5 +1,5 @@
 export const homeScript = String.raw`
-import { apiRequest } from "/api-client.js"
+import { apiRequest, loadClerk } from "/api-client.js"
 
 const boardDialog = document.querySelector("#board-dialog")
 const boardForm = boardDialog?.querySelector("form")
@@ -9,6 +9,21 @@ const boardError = document.querySelector("[data-board-error]")
 const unavailableSlugs = new Set(
   (boardDialog?.dataset.unavailableSlugs ?? "").split(","),
 )
+const signInLink = document.querySelector("[data-sign-in]")
+
+signInLink?.addEventListener("click", async (event) => {
+  event.preventDefault()
+  let signInUrl = signInLink.href
+
+  try {
+    const clerk = await loadClerk()
+    const redirectUrl = new URL("/auth/redirect", location.origin).href
+
+    signInUrl = clerk.buildSignInUrl({ redirectUrl })
+  } catch {}
+
+  location.assign(signInUrl)
+})
 
 function slugFromName(name) {
   return name

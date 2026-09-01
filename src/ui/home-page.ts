@@ -26,7 +26,7 @@ export function renderHomePage({
         `<li><a class="board-link" href="/${encodeURIComponent(board.slug)}">${escapeHtml(board.name)}</a></li>`,
     )
     .join("")
-  let action = `<a class="home-action" href="${escapeHtml(signInUrl)}">Sign in</a>`
+  let action = `<a class="home-action" href="${escapeHtml(signInUrl)}" data-sign-in>Sign in</a>`
 
   if (userName && ownerBoard) {
     action = `<a class="home-user" href="/${encodeURIComponent(ownerBoard.slug)}">${escapeHtml(userName)}</a>`
@@ -59,8 +59,11 @@ export function renderHomePage({
           <button class="primary-button" type="submit">Create board</button>
         </div>
       </form>
-    </dialog>
-    ${renderApiClientScripts(clerkPublishableKey, "/home.js")}`
+    </dialog>`
+      : ""
+  const authenticationScripts =
+    !userName || !ownerBoard
+      ? renderApiClientScripts(clerkPublishableKey, "/home.js")
       : ""
 
   return `<!doctype html>
@@ -83,6 +86,7 @@ export function renderHomePage({
       </nav>
     </main>
     ${onboarding}
+    ${authenticationScripts}
   </body>
 </html>`
 }

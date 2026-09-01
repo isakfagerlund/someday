@@ -5,7 +5,7 @@ import { escapeHtml } from "./html"
 export const apiClientScript = String.raw`
 let clerkLoad
 
-async function getSessionToken() {
+export async function loadClerk() {
   const clerk = globalThis.Clerk
 
   if (!clerk) {
@@ -14,6 +14,12 @@ async function getSessionToken() {
 
   clerkLoad ??= clerk.load()
   await clerkLoad
+
+  return clerk
+}
+
+async function getSessionToken() {
+  const clerk = await loadClerk()
 
   const token = await clerk.session?.getToken()
 
