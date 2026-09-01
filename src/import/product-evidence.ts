@@ -21,11 +21,17 @@ const metadataNames = new Set([
   "twitter:title",
 ])
 
-export type ImageEvidenceSource = "html" | "open-graph" | "twitter"
+export type ImageEvidenceSource =
+  | "html"
+  | "json-ld"
+  | "open-graph"
+  | "twitter"
 
 export interface ImageEvidence {
   url: string
   source: ImageEvidenceSource
+  alt?: string
+  height?: number
   width?: number
 }
 
@@ -52,6 +58,65 @@ function appendWithinLimit(current: string, value: string, limit: number) {
 
 function normalizedText(value: string) {
   return value.replace(/\s+/g, " ").trim()
+}
+
+function largestSrcsetCandidate(value: string | null) {
+  let largest:
+    | { url: string; width?: number; score: number }
+    | undefined
+
+  for (const candidate of value?.split(",") ?? []) {
+    const [url, descriptor] = candidate.trim().split(/\s+/, 2)
+    if (!url) continue
+
+    const size = Number(descriptor?.slice(0, -1))
+    const score = Number.isFinite(size) ? size : 1
+    const width = descriptor?.endsWith("w") ? size : undefined
+
+    if (!largest || score > largest.score) {
+      largest = {
+        url,
+        score,
+        ...(width ? { width } : {}),
+      }
+    }
+  }
+
+  return largest
+}
+
+function productJsonLdImages(
+  value: unknown,
+  addImage: (value: string) => void,
+): void {
+  if (Array.isArray(value)) {
+    for (const item of value) productJsonLdImages(item, addImage)
+    return
+  }
+
+  if (!value || typeof value !== "object") return
+
+  const record = value as Record<string, unknown>
+  const types = Array.isArray(record["@type"])
+    ? record["@type"]
+    : [record["@type"]]
+
+  if (types.includes("Product")) {
+    const images = Array.isArray(record.image) ? record.image : [record.image]
+
+    for (const image of images) {
+      if (typeof image === "string") {
+        addImage(image)
+      } else if (image && typeof image === "object") {
+        const imageRecord = image as Record<string, unknown>
+        const imageUrl = imageRecord.url ?? imageRecord.contentUrl
+
+        if (typeof imageUrl === "string") addImage(imageUrl)
+      }
+    }
+  }
+
+  productJsonLdImages(record["@graph"], addImage)
 }
 
 function resolvedPublicUrl(value: string, baseUrl: URL) {
@@ -135,6 +200,8 @@ export async function extractProductEvidence(
     value: string | null,
     source: ImageEvidenceSource,
     width?: number,
+    height?: number,
+    alt?: string,
   ) {
     if (!value) return
 
@@ -148,13 +215,23 @@ export async function extractProductEvidence(
       if (width && (!existing.width || width > existing.width)) {
         existing.width = width
       }
+      if (height && (!existing.height || height > existing.height)) {
+        existing.height = height
+      }
+      if (alt && !existing.alt) existing.alt = alt
 
       return
     }
 
     if (images.length >= maxImages) return
 
-    const image = { url: url.href, source, ...(width ? { width } : {}) }
+    const image = {
+      url: url.href,
+      source,
+      ...(alt ? { alt } : {}),
+      ...(height ? { height } : {}),
+      ...(width ? { width } : {}),
+    }
     imagesByUrl.set(url.href, image)
     images.push(image)
   }
@@ -192,7 +269,9 @@ export async function extractProductEvidence(
       element.onEndTag(() => {
         if (!truncatedJsonLd) {
           try {
-            jsonLd.push(JSON.parse(currentJsonLd) as unknown)
+            const parsed = JSON.parse(currentJsonLd) as unknown
+            jsonLd.push(parsed)
+            productJsonLdImages(parsed, (value) => addImage(value, "json-ld"))
           } catch {
             // Some shops publish malformed JSON-LD. Other evidence can still work.
           }
@@ -259,10 +338,24 @@ export async function extractProductEvidence(
         }
       },
     })
+    .on("source[srcset]", {
+      element(element) {
+        const candidate = largestSrcsetCandidate(
+          element.getAttribute("srcset"),
+        )
+
+        if (candidate) addImage(candidate.url, "html", candidate.width)
+      },
+    })
     .on("img", {
       element(element) {
         const declaredWidth = Number(element.getAttribute("width"))
+        const declaredHeight = Number(element.getAttribute("height"))
         const width = Number.isFinite(declaredWidth) ? declaredWidth : undefined
+        const height = Number.isFinite(declaredHeight)
+          ? declaredHeight
+          : undefined
+        const alt = normalizedText(element.getAttribute("alt") ?? "") || undefined
 
         for (const attribute of [
           "src",
@@ -270,21 +363,20 @@ export async function extractProductEvidence(
           "data-original",
           "data-lazy-src",
         ]) {
-          addImage(element.getAttribute(attribute), "html", width)
+          addImage(element.getAttribute(attribute), "html", width, height, alt)
         }
 
-        const srcset = element.getAttribute("srcset")
+        const candidate = largestSrcsetCandidate(
+          element.getAttribute("srcset"),
+        )
 
-        for (const candidate of srcset?.split(",") ?? []) {
-          const [url, descriptor] = candidate.trim().split(/\s+/, 2)
-          const candidateWidth = descriptor?.endsWith("w")
-            ? Number(descriptor.slice(0, -1))
-            : undefined
-
+        if (candidate) {
           addImage(
-            url ?? null,
+            candidate.url,
             "html",
-            Number.isFinite(candidateWidth) ? candidateWidth : undefined,
+            candidate.width,
+            height,
+            alt,
           )
         }
       },

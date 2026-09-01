@@ -6,13 +6,27 @@ import { deleteProduct, updateProduct } from "../db/products"
 import { categories } from "../domain/product"
 import { deleteProductImage } from "../images"
 import {
+  createProduct,
   DuplicateProductError,
-  importProduct,
+  previewProduct,
+  ProductImageImportError,
 } from "../import/import-product"
 import { ProductUrlError } from "../import/product-url"
 
-const createProductInputSchema = z
+const previewProductInputSchema = z
   .object({ url: z.string().trim().min(1) })
+  .strict()
+
+const createProductInputSchema = z
+  .object({
+    sourceUrl: z.string().trim().min(1),
+    canonicalUrl: z.string().trim().min(1),
+    name: z.string().trim().min(1).max(300),
+    brand: z.string().trim().min(1).max(150),
+    category: z.enum(categories),
+    imageUrl: z.string().trim().min(1),
+    method: z.enum(["direct", "fallback", "rendered", "search"]),
+  })
   .strict()
 
 const updateProductInputSchema = z
@@ -31,44 +45,43 @@ function jsonError(error: string, status: number) {
   )
 }
 
-async function parseCreateProductInput(request: Request) {
-  let body: unknown
-  const contentType = request.headers.get("content-type") ?? ""
-  const acceptsHtml = contentType.startsWith(
-    "application/x-www-form-urlencoded",
-  )
+async function parseJsonInput<T>(request: Request, schema: z.ZodType<T>) {
+  const contentLength = Number(request.headers.get("content-length"))
 
+  if (Number.isFinite(contentLength) && contentLength > 32_000) return null
+
+  let body: unknown
   try {
-    if (acceptsHtml) {
-      const form = await request.formData()
-      body = { url: form.get("url") }
-    } else {
-      body = await request.json<unknown>()
-    }
+    body = await request.json<unknown>()
   } catch {
-    return { acceptsHtml, input: null }
+    return null
   }
 
-  const result = createProductInputSchema.safeParse(body)
-  return { acceptsHtml, input: result.success ? result.data : null }
+  const result = schema.safeParse(body)
+  return result.success ? result.data : null
 }
 
-function redirectToBoard(
+export async function handlePreviewProduct(
   request: Request,
-  boardSlug: string,
-  importStatus?: string,
+  userId: string,
+  env: Env,
 ) {
-  const location = new URL(`/${encodeURIComponent(boardSlug)}`, request.url)
+  const input = await parseJsonInput(request, previewProductInputSchema)
 
-  if (importStatus) location.searchParams.set("import", importStatus)
+  if (!input) {
+    return jsonError('Send JSON like {"url":"https://shop.example/product"}', 400)
+  }
 
-  return new Response(null, {
-    status: 303,
-    headers: {
-      "cache-control": "no-store",
-      location: location.href,
-    },
-  })
+  const board = await getBoardByOwnerId(env.DB, userId)
+  if (!board) return jsonError("You do not own a board", 403)
+
+  try {
+    const preview = await previewProduct(input.url, env)
+    return Response.json(preview, { headers: { "cache-control": "no-store" } })
+  } catch (error) {
+    if (error instanceof ProductUrlError) return jsonError(error.message, 400)
+    throw error
+  }
 }
 
 export async function handleCreateProduct(
@@ -77,22 +90,19 @@ export async function handleCreateProduct(
   env: Env,
   ctx: ExecutionContext,
 ) {
-  const { acceptsHtml, input } = await parseCreateProductInput(request)
+  const input = await parseJsonInput(request, createProductInputSchema)
 
-  if (!input && !acceptsHtml) {
-    return jsonError('Send JSON like {"url":"https://shop.example/product"}', 400)
+  if (!input) {
+    return jsonError("Confirm the product details and choose an image.", 400)
   }
 
   const board = await getBoardByOwnerId(env.DB, userId)
 
   if (!board) return jsonError("You do not own a board", 403)
-  if (!input) return redirectToBoard(request, board.slug, "invalid")
 
   try {
-    const product = await importProduct(input.url, board.id, env)
+    const product = await createProduct(input, board.id, env)
     await purgeBoardCache(ctx, board.id)
-
-    if (acceptsHtml) return redirectToBoard(request, board.slug)
 
     return Response.json(product, {
       status: 201,
@@ -100,19 +110,15 @@ export async function handleCreateProduct(
     })
   } catch (error) {
     if (error instanceof ProductUrlError) {
-      if (acceptsHtml) {
-        return redirectToBoard(request, board.slug, "invalid")
-      }
-
       return jsonError(error.message, 400)
     }
 
     if (error instanceof DuplicateProductError) {
-      if (acceptsHtml) {
-        return redirectToBoard(request, board.slug, "duplicate")
-      }
-
       return jsonError(error.message, 409)
+    }
+
+    if (error instanceof ProductImageImportError) {
+      return jsonError(error.message, 422)
     }
 
     throw error

@@ -21,14 +21,17 @@ describe("extractProductEvidence", () => {
           <meta property="og:image" content="images/lamp.jpg">
           <meta name="twitter:image" content="https://images.example.com/lamp.jpg">
           <script type="application/ld+json">
-            {"@type":"Product","name":"Pleated Lamp","brand":"Hay"}
+            {"@type":"Product","name":"Pleated Lamp","brand":"Hay","image":["structured-front.jpg",{"contentUrl":"/structured-back.jpg"}]}
           </script>
           <script type="application/ld+json">not valid json</script>
         </head>
         <body>
           <h1>Pleated Lamp</h1>
           <p>A soft paper shade.</p>
-          <img src="/lamp-small.jpg" width="400" srcset="/lamp-medium.jpg 800w, /lamp-large.jpg 1200w">
+          <picture>
+            <source srcset="/lamp-source-small.jpg 600w, /lamp-source-large.jpg 1400w">
+            <img src="/lamp-small.jpg" width="400" srcset="/lamp-medium.jpg 800w, /lamp-large.jpg 1200w">
+          </picture>
           <img src="data:image/png;base64,nope">
         </body>
       </html>`,
@@ -47,7 +50,17 @@ describe("extractProductEvidence", () => {
         "og:image": "images/lamp.jpg",
         "twitter:image": "https://images.example.com/lamp.jpg",
       },
-      jsonLd: [{ "@type": "Product", name: "Pleated Lamp", brand: "Hay" }],
+      jsonLd: [
+        {
+          "@type": "Product",
+          name: "Pleated Lamp",
+          brand: "Hay",
+          image: [
+            "structured-front.jpg",
+            { contentUrl: "/structured-back.jpg" },
+          ],
+        },
+      ],
       text: "Pleated Lamp A soft paper shade.",
       images: [
         {
@@ -56,14 +69,22 @@ describe("extractProductEvidence", () => {
         },
         { url: "https://images.example.com/lamp.jpg", source: "twitter" },
         {
+          url: "https://cdn.example.com/catalog/structured-front.jpg",
+          source: "json-ld",
+        },
+        {
+          url: "https://cdn.example.com/structured-back.jpg",
+          source: "json-ld",
+        },
+        {
+          url: "https://cdn.example.com/lamp-source-large.jpg",
+          source: "html",
+          width: 1400,
+        },
+        {
           url: "https://cdn.example.com/lamp-small.jpg",
           source: "html",
           width: 400,
-        },
-        {
-          url: "https://cdn.example.com/lamp-medium.jpg",
-          source: "html",
-          width: 800,
         },
         {
           url: "https://cdn.example.com/lamp-large.jpg",
