@@ -87,18 +87,36 @@ jobs:
     steps:
       - name: Delete preview versions
         run: |
-          versions="$(curl --fail --silent --show-error \
+          workers="$(curl --fail --silent --show-error \
             --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/workers/someday/versions?per_page=100")"
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/workers?per_page=100")"
+          worker_id="$(jq --exit-status --raw-output --arg name someday \
+            '.result[] | select(.name == $name) | .id' <<< "$workers")"
 
-          jq --raw-output --arg tag "$PREVIEW_TAG" \
-            '.result[] | select(.annotations["workers/tag"] == $tag) | .id' \
-            <<< "$versions" |
+          version_ids=()
+          page=1
+
+          while true; do
+            versions="$(curl --fail --silent --show-error \
+              --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/workers/$worker_id/versions?per_page=100&page=$page")"
+
             while read -r version_id; do
-              curl --fail --silent --show-error --request DELETE \
-                --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-                "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/workers/someday/versions/$version_id"
-            done
+              version_ids+=("$version_id")
+            done < <(jq --raw-output --arg tag "$PREVIEW_TAG" \
+              '.result[] | select(.annotations["workers/tag"] == $tag) | .id' \
+              <<< "$versions")
+
+            total_pages="$(jq --raw-output '.result_info.total_pages // 1' <<< "$versions")"
+            ((page >= total_pages)) && break
+            ((page += 1))
+          done
+
+          for version_id in "${version_ids[@]}"; do
+            curl --fail --silent --show-error --request DELETE \
+              --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/workers/$worker_id/versions/$version_id"
+          done
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
