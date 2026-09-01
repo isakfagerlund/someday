@@ -13,6 +13,7 @@ vi.mock("../db/boards", () => ({
 import {
   handleCreateProduct,
   handleDeleteProduct,
+  handlePreviewProduct,
   handleUpdateProduct,
 } from "./products"
 
@@ -43,47 +44,27 @@ describe("handleCreateProduct", () => {
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({
-      error: 'Send JSON like {"url":"https://shop.example/product"}',
+      error: "Confirm the product details and choose an image.",
     })
   })
 
   it("rejects an unsafe product URL before using any bindings", async () => {
-    const request = new Request("https://someday.example/api/products", {
+    const request = new Request("https://someday.example/api/product-previews", {
       method: "POST",
       body: JSON.stringify({ url: "http://localhost/product" }),
       headers: { "content-type": "application/json" },
     })
 
-    const response = await handleCreateProduct(
+    const response = await handlePreviewProduct(
       request,
       "user_owner",
       {} as Env,
-      {} as ExecutionContext,
     )
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({
       error: "Product URLs must use a public domain",
     })
-  })
-
-  it("redirects an invalid HTML form back to the catalog", async () => {
-    const request = new Request("https://someday.example/api/products", {
-      method: "POST",
-      body: new URLSearchParams({ url: "" }),
-    })
-
-    const response = await handleCreateProduct(
-      request,
-      "user_owner",
-      {} as Env,
-      {} as ExecutionContext,
-    )
-
-    expect(response.status).toBe(303)
-    expect(response.headers.get("location")).toBe(
-      "https://someday.example/isaks-board?import=invalid",
-    )
   })
 
   it("rejects a malformed delete ID before using any bindings", async () => {

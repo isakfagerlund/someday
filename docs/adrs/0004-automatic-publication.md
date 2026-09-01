@@ -4,17 +4,19 @@ Status: Accepted
 
 ## Context
 
-The main curator action should be pasting a URL. Confirming every successful import would add routine work and weaken the central product promise.
+The main curator action should be pasting a URL. In practice, automatic image selection sometimes chooses an unattractive or incorrect image, while some shops block page access entirely.
 
 ## Decision
 
-Every product saved to D1 is public immediately. Do not require a preview or confirmation step.
+Show a transient image picker before saving. The importer infers the product details, and the curator chooses from the discovered images.
+
+Every confirmed product saved to D1 is public immediately. Do not add a persisted draft or separate publishing step.
 
 If fetching, extraction, image copying, or persistence fails, return an error without saving a partial product. Provide an easy way to edit or delete an incorrect import through the same public API.
 
 ## Consequences
 
-- The common import path requires only a URL.
+- The common import path requires a URL and one confirmation.
 - Version one needs no draft, unpublished, or exception-review state.
-- Some incorrect products may briefly appear publicly.
-- Editing and deletion must be available even though routine confirmation is absent.
+- Incorrect images can be corrected before they become public. Product details remain editable after saving.
+- A blocked shop can still be imported when search finds a usable image.

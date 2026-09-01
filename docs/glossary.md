@@ -42,7 +42,7 @@ Make a saved product visible in the public catalog.
 
 ## Automatic publication
 
-Publishing an import immediately when it is saved, without asking the curator for confirmation.
+Publishing a confirmed import immediately when it is saved, without a persisted draft or separate publishing step.
 
 ## Shared API token
 

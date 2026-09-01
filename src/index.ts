@@ -2,6 +2,7 @@ import { handleCreateBoard } from "./api/boards"
 import {
   handleCreateProduct,
   handleDeleteProduct,
+  handlePreviewProduct,
   handleUpdateProduct,
 } from "./api/products"
 import {
@@ -55,6 +56,7 @@ async function handleMutation(
   request: Request,
   env: Env,
   ctx: ExecutionContext,
+  action: "create" | "delete" | "preview" | "update",
   productId?: string,
 ) {
   const auth = await authenticateRequest(request, env)
@@ -67,11 +69,13 @@ async function handleMutation(
 
   let response: Response
 
-  if (request.method === "POST") {
+  if (action === "preview") {
+    response = await handlePreviewProduct(request, userId, env)
+  } else if (action === "create") {
     response = await handleCreateProduct(request, userId, env, ctx)
-  } else if (request.method === "PATCH" && productId) {
+  } else if (action === "update" && productId) {
     response = await handleUpdateProduct(request, productId, userId, env, ctx)
-  } else if (request.method === "DELETE" && productId) {
+  } else if (action === "delete" && productId) {
     response = await handleDeleteProduct(productId, userId, env, ctx)
   } else {
     response = new Response("Not found", { status: 404 })
@@ -161,7 +165,6 @@ async function handleHtmlRequest(request: Request, env: Env) {
     board,
     canManage,
     clerkPublishableKey: env.CLERK_PUBLISHABLE_KEY,
-    importStatus: canManage ? url.searchParams.get("import") : null,
     products,
   })
 
@@ -225,7 +228,11 @@ async function handleRequest(
   }
 
   if (url.pathname === "/api/products" && request.method === "POST") {
-    return handleMutation(request, env, ctx)
+    return handleMutation(request, env, ctx, "create")
+  }
+
+  if (url.pathname === "/api/product-previews" && request.method === "POST") {
+    return handleMutation(request, env, ctx, "preview")
   }
 
   if (url.pathname === "/api/boards" && request.method === "POST") {
@@ -247,7 +254,9 @@ async function handleRequest(
     productRoute &&
     (request.method === "PATCH" || request.method === "DELETE")
   ) {
-    return handleMutation(request, env, ctx, productRoute[1] ?? "")
+    const action = request.method === "PATCH" ? "update" : "delete"
+
+    return handleMutation(request, env, ctx, action, productRoute[1] ?? "")
   }
 
   if (request.method === "GET") return handleHtmlRequest(request, env)

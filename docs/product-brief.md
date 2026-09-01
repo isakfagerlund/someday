@@ -10,9 +10,10 @@ The curator pastes a product URL. The system should do nearly all remaining work
 
 1. Fetch product metadata and structured data.
 2. Render the page when a direct fetch is insufficient.
-3. Ask GPT-5.6 Luna to select and normalize product details.
-4. Copy the chosen image into managed storage.
-5. Save and publish the product.
+3. Search for the exact product when the shop blocks both fetch methods.
+4. Ask GPT-5.6 Luna to normalize the details and recommend an image.
+5. Let the curator choose from the discovered images.
+6. Copy the chosen image into managed storage, then save and publish the product.
 
 The image import keeps the largest available source in R2 and creates 360, 720,
 and 1080 pixel-wide WebP variants in a 4:5 crop. The catalog uses `srcset` so
@@ -84,9 +85,14 @@ each browser downloads the smallest useful variant.
 - No authentication, authorization, Cloudflare Access policy, user identity, or shared secret
 - All maintenance actions call the same API that future MCP tools will use
 
-`POST /api/products` accepts `{"url":"https://shop.example/product"}`. It
-returns the saved catalog product with status 201, rejects an existing canonical
-URL with status 409, and returns status 422 when the page cannot be imported.
+`POST /api/product-previews` accepts `{"url":"https://shop.example/product"}`
+and returns inferred details plus discovered image choices. The modal keeps the
+details hidden and asks the curator only to choose an image. If the shop blocks
+direct and rendered access, the importer uses web search.
+
+`POST /api/products` accepts the confirmed details and selected image. It returns
+the saved catalog product with status 201, rejects an existing canonical URL
+with status 409, and returns status 422 when the selected image cannot be copied.
 `PATCH /api/products/:id` accepts any non-empty subset of `name`, `brand`, and
 `category`, returning the updated product. Imported source and image fields are
 not editable; delete and re-import the product to replace them.

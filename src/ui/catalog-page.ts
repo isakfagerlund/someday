@@ -19,17 +19,11 @@ const closeIcon = `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M205.6
 
 const editIcon = `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M227.31,73.37,182.63,28.69a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96A16,16,0,0,0,227.31,73.37ZM48,163.31l88-88L152.69,92,64.68,180H48Zm42.69,44.71L64,208V195.31l88-88L168.69,124ZM216,84.69,180,120.69,135.31,76,171.31,40,216,84.69Z"/></svg>`
 
-const importMessages: Record<string, string> = {
-  duplicate: "That product is already on this board.",
-  invalid: "Enter a valid public product URL.",
-}
-
 interface CatalogPageProps {
   activeCategory: Category | null
   board: Board
   canManage: boolean
   clerkPublishableKey: string
-  importStatus?: string | null
   products: CatalogProduct[]
 }
 
@@ -100,21 +94,48 @@ function renderProductCard(
 </li>`
 }
 
-function renderImportDialog(openOnLoad: boolean, status: string) {
-  return `<dialog class="import-dialog" id="import-dialog" aria-labelledby="import-dialog-title"${openOnLoad ? " data-open-on-load" : ""}>
-      <form class="import-form" id="import-form" action="/api/products" method="post">
+function renderImportDialog() {
+  return `<dialog class="import-dialog" id="import-dialog" aria-labelledby="import-dialog-title">
+      <form class="import-form" id="import-form">
         <div class="import-form__heading">
           <h2 id="import-dialog-title">Add product</h2>
           <button class="dialog-close" type="button" aria-label="Close add product dialog" data-close-import-dialog>${closeIcon}</button>
         </div>
-        <p class="import-form__intro">Paste a link and we'll do the rest</p>
-        <label for="product-url">Product URL</label>
-        <div class="import-form__fields">
-          <input id="product-url" name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://shop.example/product" autofocus required>
-          <button class="import-form__submit" type="submit">Add product</button>
+        <div data-import-url-step>
+          <p class="import-form__intro">Paste a link and we'll find the product</p>
+          <label for="product-url">Product URL</label>
+          <div class="import-form__fields">
+            <input id="product-url" name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://shop.example/product" autofocus required>
+            <button class="import-form__submit" type="submit">Load</button>
+          </div>
         </div>
+        <section class="import-preview" data-import-preview hidden>
+          <p class="import-status" data-import-warning role="status" hidden></p>
+          <input name="sourceUrl" type="hidden">
+          <input name="canonicalUrl" type="hidden">
+          <input name="method" type="hidden">
+          <input name="imageUrl" type="hidden">
+          <input name="name" type="hidden">
+          <input name="brand" type="hidden">
+          <input name="category" type="hidden">
+          <fieldset class="image-picker">
+            <legend>Choose an image</legend>
+            <div class="image-picker__carousel">
+              <button class="image-picker__control image-picker__control--previous" type="button" aria-label="Previous images" data-image-previous hidden disabled>
+                <svg viewBox="0 0 256 256" aria-hidden="true"><path d="M162.83,205.66a8,8,0,0,1-11.32,0l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L96.49,128l66.34,66.34A8,8,0,0,1,162.83,205.66Z"/></svg>
+              </button>
+              <div class="image-picker__choices" data-image-choices></div>
+              <button class="image-picker__control image-picker__control--next" type="button" aria-label="Next images" data-image-next>
+                <svg viewBox="0 0 256 256" aria-hidden="true"><path d="M176.49,133.66l-72,72a8,8,0,0,1-11.32-11.32L159.51,128,93.17,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,176.49,133.66Z"/></svg>
+              </button>
+            </div>
+            <p class="image-picker__empty" data-image-empty hidden>No usable images found.</p>
+          </fieldset>
+          <div class="product-form__actions">
+            <button class="primary-button" type="submit">Add product</button>
+          </div>
+        </section>
         <p class="import-status product-form__error" data-import-error role="alert" hidden></p>
-        ${status}
       </form>
     </dialog>`
 }
@@ -149,7 +170,6 @@ export function renderCatalogPage({
   board,
   canManage,
   clerkPublishableKey,
-  importStatus,
   products,
 }: CatalogPageProps) {
   const filters = [
@@ -173,13 +193,8 @@ export function renderCatalogPage({
   const title = activeCategory
     ? `${escapeHtml(activeCategory)} · ${boardName}`
     : boardName
-  const importMessage =
-    canManage && importStatus ? importMessages[importStatus] : undefined
-  const status = importMessage
-    ? `<p class="import-status" role="status">${importMessage}</p>`
-    : ""
   const managementHtml = canManage
-    ? `${renderImportDialog(Boolean(importMessage), status)}
+    ? `${renderImportDialog()}
     ${renderProductDialog()}
     ${renderApiClientScripts(clerkPublishableKey, "/catalog.js")}`
     : ""
