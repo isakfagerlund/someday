@@ -10,6 +10,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   deploy:
@@ -41,6 +42,43 @@ jobs:
         run: curl --fail --silent --show-error --retry 5 --retry-all-errors "${PREVIEW_URL%/}/health"
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
+
+      - name: Add preview link to pull request
+        uses: actions/github-script@v9
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
+        with:
+          script: |
+            const marker = "<!-- cloudflare-pr-preview -->"
+            const body = [
+              marker,
+              "### Cloudflare preview",
+              "",
+              `[Open preview](${process.env.PREVIEW_URL})`,
+              "",
+              `Updated for \`${context.payload.pull_request.head.sha.slice(0, 7)}\`.`,
+            ].join("\n")
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              { ...context.repo, issue_number: context.issue.number, per_page: 100 },
+            )
+            const existingComment = comments.find((comment) =>
+              comment.user?.type === "Bot" && comment.body?.includes(marker),
+            )
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: existingComment.id,
+                body,
+              })
+            } else {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.issue.number,
+                body,
+              })
+            }
 
   cleanup:
     if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
