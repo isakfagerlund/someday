@@ -36,22 +36,15 @@ The GitHub repository needs these Actions secrets:
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN`
 
-PR previews also need these Actions secrets:
+Every same-repository pull request is uploaded as a preview version of the
+`someday` Worker. It reuses the secrets already attached to that Worker, so no
+application secrets need to be copied to GitHub. GitHub shows the preview URL as
+**View deployment** on the pull request. The preview is updated on every push,
+and its tagged versions are deleted when the pull request is closed or merged.
+Fork pull requests are skipped because GitHub does not expose repository secrets
+to them.
 
-- `OPENAI_API_KEY`
-- `CLERK_SECRET_KEY`
-- `CLERK_PUBLISHABLE_KEY`
-- `CLERK_JWT_KEY`
-
-These can contain the same values used by the production Worker.
-
-Every same-repository pull request is deployed to a temporary
-`someday-pr-<number>` Worker. GitHub shows its URL as **View deployment** on the
-pull request. The Worker is updated on every push and deleted when the pull
-request is closed or merged. Fork pull requests are skipped because GitHub does
-not expose repository secrets to them.
-
-Preview Workers currently share the D1 database and R2 bucket configured in
+Preview versions share the D1 database and R2 bucket configured in
 `wrangler.jsonc` with production, so preview writes affect production data.
 
 It also needs a `PRODUCTION_URL` repository variable. Store the OpenAI and Clerk
