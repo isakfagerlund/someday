@@ -406,6 +406,18 @@
     font-size: 0.875rem;
   }
 
+  .image-picker__link {
+    display: block;
+    margin-top: var(--space-3);
+    margin-bottom: var(--space-2);
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+
+  .image-picker input[type="url"] {
+    width: 100%;
+  }
+
   .import-preview .product-form__actions {
     justify-content: flex-end;
   }

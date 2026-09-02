@@ -63,14 +63,14 @@ export function validateProductUrl(input: string | URL) {
 
 export type ProductFetcher = (url: string, init: RequestInit) => Promise<Response>
 
-interface ProductPage {
+export interface ProductPage {
   response: Response
   url: URL
 }
 
 export async function fetchPublicResource(
   input: string | URL,
-  accept: string,
+  headers: Record<string, string>,
   fetcher: ProductFetcher = fetch,
 ): Promise<ProductPage> {
   let url = validateProductUrl(input)
@@ -78,7 +78,9 @@ export async function fetchPublicResource(
   for (let redirectCount = 0; ; redirectCount += 1) {
     const response = await fetcher(url.href, {
       headers: {
-        accept,
+        ...headers,
+        // Some WAFs (Sweetwater, YETI) reject browsers without a language.
+        "accept-language": "en-US,en;q=0.9",
         "user-agent": browserUserAgent,
       },
       redirect: "manual",
@@ -106,6 +108,14 @@ export async function fetchPublicResource(
 export function fetchProductPage(
   input: string | URL,
   fetcher: ProductFetcher = fetch,
+  cookie?: string,
 ) {
-  return fetchPublicResource(input, "text/html,application/xhtml+xml", fetcher)
+  return fetchPublicResource(
+    input,
+    {
+      accept: "text/html,application/xhtml+xml",
+      ...(cookie ? { cookie } : {}),
+    },
+    fetcher,
+  )
 }

@@ -74,4 +74,25 @@ describe("searchProduct", () => {
       ],
     })
   })
+
+  it("keeps the found details when search yields no usable image", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      openAIResponse({
+        name: "Era 100",
+        brand: "Sonos",
+        category: "Tech",
+        imageUrls: ["data:image/png;base64,nope"],
+      }),
+    )
+    const openai = new OpenAI({ apiKey: "test", fetch: fetcher })
+
+    await expect(
+      searchProduct(openai, "https://www.sonos.com/en/shop/era-100"),
+    ).resolves.toEqual({
+      name: "Era 100",
+      brand: "Sonos",
+      category: "Tech",
+      imageUrls: [],
+    })
+  })
 })

@@ -184,7 +184,7 @@ export async function storeProductImage(
 ) {
   const { response } = await fetchPublicResource(
     imageUrl,
-    "image/webp,image/jpeg,image/png,image/*;q=0.8",
+    { accept: "image/webp,image/jpeg,image/png,image/*;q=0.8" },
     fetcher,
   )
   const sourceContentType = response.headers.get("content-type") ?? undefined

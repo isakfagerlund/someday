@@ -63,9 +63,5 @@ export async function searchProduct(openai: OpenAI, sourceUrl: string) {
     }
   })
 
-  if (imageUrls.length === 0) {
-    throw new ProductSearchError("Web search found no usable product images")
-  }
-
   return { ...response.output_parsed, imageUrls: [...new Set(imageUrls)] }
 }

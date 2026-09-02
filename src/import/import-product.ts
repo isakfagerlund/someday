@@ -16,7 +16,12 @@ import { productFallbackFromUrl } from "./product-fallback"
 import { validateProductUrl } from "./product-url"
 import { searchProduct } from "./search-product"
 
-export type ProductImportMethod = "direct" | "fallback" | "rendered" | "search"
+export type ProductImportMethod =
+  | "direct"
+  | "fallback"
+  | "platform"
+  | "rendered"
+  | "search"
 
 export interface ProductImportPreview {
   sourceUrl: string
@@ -83,6 +88,7 @@ export function productImageChoices(
 ) {
   const priority: Record<ImageEvidenceSource, number> = {
     "json-ld": 0,
+    platform: 0,
     "open-graph": 1,
     twitter: 2,
     html: 3,
@@ -131,7 +137,10 @@ async function searchPreview(
     imageUrls: result.imageUrls,
     recommendedImageUrl: result.imageUrls[0] ?? "",
     method: "search",
-    warning: "This shop blocked direct access, so we found the product via search.",
+    warning:
+      result.imageUrls.length > 0
+        ? "This shop blocked direct access, so we found the product via search."
+        : "This shop blocked direct access. We found the details via search, but you need to paste an image link.",
   }
 }
 
@@ -173,7 +182,8 @@ export async function previewProduct(
         imageUrls: [],
         recommendedImageUrl: "",
         method: "fallback",
-        warning: "We could not read this shop or find a product image.",
+        warning:
+          "We could not read this shop. Paste an image link and check the details after adding.",
       }
     }
   }

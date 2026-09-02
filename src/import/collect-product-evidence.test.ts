@@ -101,32 +101,89 @@ describe("collectProductEvidence", () => {
     )
   })
 
-  it("renders when the direct fetch is blocked", async () => {
-    const browser = {
-      quickAction: vi.fn().mockResolvedValue(
-        Response.json({
-          success: true,
-          result:
-            `<title>Desk Lamp</title><meta property="og:image" content="/rendered-lamp.jpg">`,
-          meta: {
-            status: 200,
-            title: "Desk Lamp",
-            finalUrl: "https://shop.example.com/product",
+  it("retries a 403 with the cookies handed out by the site root", async () => {
+    const browser = { quickAction: vi.fn() } satisfies ProductBrowser
+    const fetcher = vi.fn(async (url: string, init: RequestInit) => {
+      if (url === "https://shop.example.com/") {
+        return new Response("<title>Shop</title>", {
+          headers: {
+            "content-type": "text/html",
+            "set-cookie": "PHPSESSID=abc123; Path=/; HttpOnly",
           },
-        }),
-      ),
-    } satisfies ProductBrowser
-    const fetcher = vi.fn().mockResolvedValue(
-      new Response("Blocked", { status: 403 }),
-    )
+        })
+      }
+
+      if (new Headers(init.headers).get("cookie") !== "PHPSESSID=abc123") {
+        return new Response("Blocked", { status: 403 })
+      }
+
+      return new Response(
+        `<title>Desk Lamp</title><meta property="og:image" content="/lamp.jpg">`,
+        { headers: { "content-type": "text/html" } },
+      )
+    })
 
     const result = await collectProductEvidence(
-      "https://shop.example.com/product",
+      "https://shop.example.com/product/desk-lamp/",
       browser,
       fetcher,
     )
 
-    expect(result.method).toBe("rendered")
-    expect(browser.quickAction).toHaveBeenCalledOnce()
+    expect(result.method).toBe("direct")
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(browser.quickAction).not.toHaveBeenCalled()
+  })
+
+  it("falls back to platform JSON instead of rendering a thin Shopify page", async () => {
+    const browser = { quickAction: vi.fn() } satisfies ProductBrowser
+    const fetcher = vi.fn(async (url: string) =>
+      url.endsWith(".json")
+        ? Response.json({
+            product: {
+              title: "Desk Lamp",
+              vendor: "Lumen",
+              product_type: "Lighting",
+              images: [{ src: "https://cdn.shopify.com/lamp.jpg", width: 1200 }],
+            },
+          })
+        : new Response("<div id=app></div>", {
+            headers: { "content-type": "text/html" },
+          }),
+    )
+
+    const result = await collectProductEvidence(
+      "https://shop.example.com/collections/lamps/products/desk-lamp",
+      browser,
+      fetcher,
+    )
+
+    expect(result.method).toBe("platform")
+    expect(result.evidence.metadata).toEqual({
+      "og:title": "Desk Lamp",
+      "product:brand": "Lumen",
+    })
+    expect(result.evidence.images).toEqual([
+      { url: "https://cdn.shopify.com/lamp.jpg", source: "platform", width: 1200 },
+    ])
+    expect(fetcher).toHaveBeenLastCalledWith(
+      "https://shop.example.com/collections/lamps/products/desk-lamp.json",
+      expect.anything(),
+    )
+    expect(browser.quickAction).not.toHaveBeenCalled()
+  })
+
+  it("does not render blocked pages, since bot managers block Browser Run too", async () => {
+    const browser = { quickAction: vi.fn() } satisfies ProductBrowser
+    const fetcher = vi.fn(async () => new Response("Access Denied", { status: 403 }))
+
+    await expect(
+      collectProductEvidence(
+        "https://www.cos.com/en-de/product/boat-neck-lace-mini-dress-1358057001",
+        browser,
+        fetcher,
+      ),
+    ).rejects.toThrow("Product page returned HTTP 403")
+
+    expect(browser.quickAction).not.toHaveBeenCalled()
   })
 })
