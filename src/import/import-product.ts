@@ -97,7 +97,11 @@ export function productImageChoices(
     recommendedImageUrl,
     ...evidence.images
       .slice()
-      .sort((left, right) => priority[left.source] - priority[right.source])
+      .sort(
+        (left, right) =>
+          priority[left.source] - priority[right.source] ||
+          (right.width ?? 0) - (left.width ?? 0),
+      )
       .map((image) => image.url),
   ]
   const identities = new Set<string>()
