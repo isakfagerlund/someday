@@ -4,6 +4,10 @@ const maxSourceBytes = 20_000_000
 const productImageDirectory = "products"
 const subjectScale = 0.8
 const subjectPosition = { x: 0.5, y: 0.5 } as const
+const variantQuality = 92
+const preferredSourceWidth = 2000
+/** Composite above the largest variant so downscaling smooths the cutout edge. */
+const maxMasterScale = 1.5
 const transparentPixel =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
 
@@ -53,14 +57,59 @@ function transparentCanvas() {
   return new Blob([bytes])
 }
 
-async function renderCutoutVariant(
-  source: Blob,
-  images: ImagesBinding,
-  variant: ProductImageVariant,
-) {
-  const innerWidth = Math.round(variant.width * subjectScale)
-  const innerHeight = Math.round(variant.height * subjectScale)
-  const cutout = images
+/** Product CDNs link thumbnails; ask the same CDN for a large render instead. */
+export function upgradedImageUrl(imageUrl: string) {
+  const url = new URL(imageUrl)
+
+  for (const parameter of ["w", "width", "imwidth", "sw"]) {
+    if (url.searchParams.has(parameter)) {
+      url.searchParams.set(parameter, String(preferredSourceWidth))
+    }
+  }
+
+  for (const parameter of ["h", "height", "sh"]) {
+    url.searchParams.delete(parameter)
+  }
+
+  // Shopify and friends encode the size in the file name: shoe_600x800.jpg
+  url.pathname = url.pathname.replace(
+    /_\d{2,4}x\d{0,4}(?=\.\w+$)/,
+    `_${preferredSourceWidth}x`,
+  )
+
+  return url.href === imageUrl ? null : url.href
+}
+
+async function masterSize(source: Blob, images: ImagesBinding) {
+  const largest = productImageVariants[productImageVariants.length - 1]
+  let scale = 1
+
+  try {
+    const info = await images.info(source.stream())
+
+    if ("width" in info) {
+      scale = Math.min(maxMasterScale, Math.max(1, info.width / largest.width))
+    }
+  } catch {
+    // Unknown source size: compose at variant size rather than upscaling.
+  }
+
+  return {
+    width: Math.round(largest.width * scale),
+    height: Math.round(largest.height * scale),
+  }
+}
+
+/**
+ * Segments the product once and centres it on a transparent canvas. Every
+ * variant is then a plain downscale of this master, which keeps the framing
+ * identical and antialiases the segmentation edge.
+ */
+async function renderCutoutMaster(source: Blob, images: ImagesBinding) {
+  const { width, height } = await masterSize(source, images)
+  const innerWidth = Math.round(width * subjectScale)
+  const innerHeight = Math.round(height * subjectScale)
+  const subject = images
     .input(source.stream())
     .transform({ segment: "foreground" })
     .transform({ trim: "border" })
@@ -70,15 +119,27 @@ async function renderCutoutVariant(
       fit: "pad",
       background: "rgba(0,0,0,0)",
     })
-
-  return images
+  const master = await images
     .input(transparentCanvas().stream())
-    .transform({ ...variant, fit: "squeeze" })
-    .draw(cutout, {
-      left: Math.round((variant.width - innerWidth) * subjectPosition.x),
-      top: Math.round((variant.height - innerHeight) * subjectPosition.y),
+    .transform({ width, height, fit: "squeeze" })
+    .draw(subject, {
+      left: Math.round((width - innerWidth) * subjectPosition.x),
+      top: Math.round((height - innerHeight) * subjectPosition.y),
     })
-    .output({ format: "image/webp", quality: 85 })
+    .output({ format: "image/png" })
+
+  return new Response(master.image()).blob()
+}
+
+function renderCutoutVariant(
+  master: Blob,
+  images: ImagesBinding,
+  variant: ProductImageVariant,
+) {
+  return images
+    .input(master.stream())
+    .transform({ ...variant, fit: "squeeze" })
+    .output({ format: "image/webp", quality: variantQuality })
 }
 
 function renderOriginalVariant(
@@ -94,15 +155,16 @@ function renderOriginalVariant(
       gravity: "auto",
       sharpen: 1,
     })
-    .output({ format: "image/webp", quality: 85 })
+    .output({ format: "image/webp", quality: variantQuality })
 }
 
 async function renderVariants(source: Blob, images: ImagesBinding) {
   try {
+    const master = await renderCutoutMaster(source, images)
     const variants = await Promise.all(
       productImageVariants.map(async (variant) => ({
         width: variant.width,
-        result: await renderCutoutVariant(source, images, variant),
+        result: await renderCutoutVariant(master, images, variant),
       })),
     )
 
@@ -176,19 +238,43 @@ async function readImage(response: Response) {
   return new Blob(chunks)
 }
 
+async function fetchImage(imageUrl: string, fetcher: ProductFetcher) {
+  const { response } = await fetchPublicResource(
+    imageUrl,
+    { accept: "image/webp,image/jpeg,image/png,image/*;q=0.8" },
+    fetcher,
+  )
+
+  return {
+    contentType: response.headers.get("content-type") ?? undefined,
+    source: await readImage(response),
+  }
+}
+
+async function fetchSourceImage(imageUrl: string, fetcher: ProductFetcher) {
+  const upgraded = upgradedImageUrl(imageUrl)
+
+  if (upgraded) {
+    try {
+      return await fetchImage(upgraded, fetcher)
+    } catch {
+      // The CDN ignored our size hints; fall back to the linked image.
+    }
+  }
+
+  return fetchImage(imageUrl, fetcher)
+}
+
 export async function storeProductImage(
   imageUrl: string,
   bucket: R2Bucket,
   images: ImagesBinding,
   fetcher: ProductFetcher = fetch,
 ) {
-  const { response } = await fetchPublicResource(
+  const { contentType: sourceContentType, source } = await fetchSourceImage(
     imageUrl,
-    { accept: "image/webp,image/jpeg,image/png,image/*;q=0.8" },
     fetcher,
   )
-  const sourceContentType = response.headers.get("content-type") ?? undefined
-  const source = await readImage(response)
   const imageKey = crypto.randomUUID()
   const { backgroundRemoved, variants } = await renderVariants(source, images)
 
