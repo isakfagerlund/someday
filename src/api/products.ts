@@ -25,7 +25,7 @@ const createProductInputSchema = z
     brand: z.string().trim().min(1).max(150),
     category: z.enum(categories),
     imageUrl: z.string().trim().min(1),
-    method: z.enum(["direct", "fallback", "rendered", "search"]),
+    method: z.enum(["direct", "fallback", "platform", "rendered", "search"]),
   })
   .strict()
 

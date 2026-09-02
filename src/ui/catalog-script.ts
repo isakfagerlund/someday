@@ -10,6 +10,7 @@ const importPreview = importForm?.querySelector("[data-import-preview]")
 const importWarning = importForm?.querySelector("[data-import-warning]")
 const imageChoices = importForm?.querySelector("[data-image-choices]")
 const imageEmpty = importForm?.querySelector("[data-image-empty]")
+const imageLink = importForm?.querySelector("[name='imageLink']")
 const imagePrevious = importForm?.querySelector("[data-image-previous]")
 const imageNext = importForm?.querySelector("[data-image-next]")
 const productDialog = document.querySelector("#product-dialog")
@@ -79,6 +80,7 @@ function renderImageChoice(imageUrl, selected, index) {
 
   radio.addEventListener("change", () => {
     if (!radio.checked) return
+    if (imageLink) imageLink.value = ""
     selectImage(imageUrl)
   })
   image.addEventListener("error", () => {
@@ -204,6 +206,13 @@ productUrlInput?.addEventListener("paste", () => {
 
 imageChoices?.addEventListener("scroll", updateCarouselControls, { passive: true })
 
+imageLink?.addEventListener("input", () => {
+  for (const radio of imageChoices?.querySelectorAll("input:checked") ?? []) {
+    radio.checked = false
+  }
+  selectImage(imageLink.value.trim())
+})
+
 importForm?.addEventListener("submit", async (event) => {
   event.preventDefault()
   if (!importError) return
@@ -236,7 +245,7 @@ importForm?.addEventListener("submit", async (event) => {
       const imageUrl = importForm.elements.imageUrl.value.trim()
 
       if (!name || !brand) throw new Error("We couldn't identify this product.")
-      if (!imageUrl) throw new Error("Choose an image.")
+      if (!imageUrl) throw new Error("Choose an image or paste an image link.")
 
       await apiRequest("/api/products", {
         method: "POST",

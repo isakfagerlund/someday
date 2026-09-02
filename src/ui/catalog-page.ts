@@ -130,6 +130,8 @@ function renderImportDialog() {
               </button>
             </div>
             <p class="image-picker__empty" data-image-empty hidden>No usable images found.</p>
+            <label class="image-picker__link" for="image-link">Or paste an image link</label>
+            <input id="image-link" name="imageLink" type="url" inputmode="url" autocomplete="off" placeholder="https://shop.example/photo.jpg">
           </fieldset>
           <div class="product-form__actions">
             <button class="primary-button" type="submit">Add product</button>

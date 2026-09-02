@@ -16,14 +16,15 @@ When direct and rendered fetches are blocked, use web search to find details and
 
 1. Normalize the submitted URL and reject unsafe destinations.
 2. Reject or flag an existing canonical URL.
-3. Fetch the page directly.
+3. Fetch the page directly. On a 403, visit the site root once and retry with its cookies, which satisfies session-gated shops.
 4. Extract JSON-LD, Open Graph data, relevant text, and image candidates.
-5. Use rendered HTML only when direct evidence is insufficient.
-6. If both page reads fail, search for the exact product and its images.
-7. Ask GPT-5.6 Luna for a product candidate matching a fixed schema and exactly one allowed category.
-8. Show the image candidates to the curator while keeping the inferred details hidden.
-9. Copy the chosen image to R2 and create the responsive catalog variants.
-10. Save it to D1, which makes it public immediately. If copying or persistence fails, return an error without saving a product.
+5. When that is insufficient, read the shop platform's product JSON (Shopify `/products/{handle}.json`, WooCommerce Store API by slug).
+6. Use rendered HTML only when the page loaded but builds its content client-side. Bot managers that block a plain fetch block Browser Run too, so rendering is skipped for blocked pages.
+7. If every page read fails, search for the exact product and its images.
+8. Ask GPT-5.6 Luna for a product candidate matching a fixed schema and exactly one allowed category.
+9. Show the image candidates to the curator while keeping the inferred details hidden.
+10. Copy the chosen image to R2 and create the responsive catalog variants.
+11. Save it to D1, which makes it public immediately. If copying or persistence fails, return an error without saving a product.
 
 ## Consequences
 

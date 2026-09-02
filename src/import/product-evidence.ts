@@ -25,6 +25,7 @@ export type ImageEvidenceSource =
   | "html"
   | "json-ld"
   | "open-graph"
+  | "platform"
   | "twitter"
 
 export interface ImageEvidence {
