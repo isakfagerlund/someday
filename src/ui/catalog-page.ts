@@ -17,6 +17,8 @@ const categoryIcons: Record<Category | "All", string> = {
 
 const closeIcon = `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128l66.35,66.34A8,8,0,0,1,205.66,194.34Z"/></svg>`
 
+const uploadIcon = `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V144a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z"/></svg>`
+
 const editIcon = `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M227.31,73.37,182.63,28.69a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96A16,16,0,0,0,227.31,73.37ZM48,163.31l88-88L152.69,92,64.68,180H48Zm42.69,44.71L64,208V195.31l88-88L168.69,124ZM216,84.69,180,120.69,135.31,76,171.31,40,216,84.69Z"/></svg>`
 
 interface CatalogPageProps {
@@ -94,6 +96,20 @@ function renderProductCard(
 </li>`
 }
 
+function renderImageUpload() {
+  return `<div class="image-upload" data-image-upload hidden>
+              <input class="image-upload__input" id="image-file" name="imageFile" type="file" accept="image/*">
+              <label class="image-upload__zone" for="image-file">
+                <img class="image-upload__preview" alt="Selected image" data-image-upload-preview hidden>
+                <span class="image-upload__prompt">
+                  ${uploadIcon}
+                  <span class="image-upload__title">Upload your own image</span>
+                  <span class="image-upload__hint" data-image-upload-hint>Drop an image here or click to browse</span>
+                </span>
+              </label>
+            </div>`
+}
+
 function renderImportDialog() {
   return `<dialog class="import-dialog" id="import-dialog" aria-labelledby="import-dialog-title">
       <form class="import-form" id="import-form">
@@ -129,9 +145,8 @@ function renderImportDialog() {
                 <svg viewBox="0 0 256 256" aria-hidden="true"><path d="M176.49,133.66l-72,72a8,8,0,0,1-11.32-11.32L159.51,128,93.17,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,176.49,133.66Z"/></svg>
               </button>
             </div>
-            <p class="image-picker__empty" data-image-empty hidden>No usable images found.</p>
-            <label class="image-picker__link" for="image-link">Or paste an image link</label>
-            <input id="image-link" name="imageLink" type="url" inputmode="url" autocomplete="off" placeholder="https://shop.example/photo.jpg">
+            <p class="image-picker__empty" data-image-empty hidden>We could not find an image for this product.</p>
+            ${renderImageUpload()}
           </fieldset>
           <div class="product-form__actions">
             <button class="primary-button" type="submit">Add product</button>

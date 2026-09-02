@@ -243,7 +243,7 @@
     color: var(--color-muted);
   }
 
-  .import-form label:not(.image-picker__choice) {
+  .import-form label:not(.image-picker__choice, .image-upload__zone) {
     display: block;
     margin-bottom: var(--space-2);
     font-size: 0.875rem;
@@ -406,16 +406,88 @@
     font-size: 0.875rem;
   }
 
-  .image-picker__link {
-    display: block;
-    margin-top: var(--space-3);
-    margin-bottom: var(--space-2);
-    color: var(--color-muted);
-    font-size: 0.875rem;
+  .image-upload {
+    position: relative;
+    margin-top: var(--space-2);
   }
 
-  .image-picker input[type="url"] {
-    width: 100%;
+  .image-upload[hidden] {
+    display: none;
+  }
+
+  /* Kept in the layout so it stays focusable, but the zone is what you see. */
+  .image-upload .image-upload__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+  }
+
+  .image-upload__zone {
+    display: grid;
+    gap: var(--space-4);
+    align-content: center;
+    justify-items: center;
+    min-height: 11rem;
+    padding: var(--space-6);
+    background: var(--color-bg);
+    border: 1px dashed var(--color-border);
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition:
+      background 140ms var(--ease-out),
+      border-color 140ms var(--ease-out);
+  }
+
+  .image-upload--dragging .image-upload__zone {
+    background: var(--color-surface);
+    border-color: var(--color-text);
+    border-style: solid;
+  }
+
+  .image-upload:has(input:focus-visible) .image-upload__zone {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+  }
+
+  .image-upload__preview {
+    max-width: 100%;
+    max-height: 14rem;
+    border-radius: 8px;
+    object-fit: contain;
+  }
+
+  .image-upload__preview[hidden] {
+    display: none;
+  }
+
+  .image-upload__prompt {
+    display: grid;
+    gap: var(--space-1);
+    justify-items: center;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+    font-weight: 400;
+  }
+
+  .image-upload__prompt svg {
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-bottom: var(--space-2);
+    fill: currentColor;
+  }
+
+  .image-upload__title {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .image-upload--filled .image-upload__prompt svg,
+  .image-upload--filled .image-upload__title {
+    display: none;
   }
 
   .import-preview .product-form__actions {
@@ -791,6 +863,11 @@
     .dialog-close:hover {
       color: var(--color-text);
       background: var(--color-bg);
+    }
+
+    .image-upload__zone:hover {
+      background: var(--color-surface);
+      border-color: var(--color-muted);
     }
 
     .danger-button:hover {

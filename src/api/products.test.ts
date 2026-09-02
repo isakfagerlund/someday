@@ -48,6 +48,36 @@ describe("handleCreateProduct", () => {
     })
   })
 
+  it("reads an uploaded image from a multipart request", async () => {
+    // Board lookup is the first step after parsing, so a 403 proves the
+    // multipart body was understood without touching D1 or R2.
+    mocks.getBoardByOwnerId.mockResolvedValue(undefined)
+
+    const body = new FormData()
+    body.append("sourceUrl", "https://shop.example/product")
+    body.append("canonicalUrl", "https://shop.example/product")
+    body.append("name", "Boat-neck lace mini dress")
+    body.append("brand", "COS")
+    body.append("category", "Clothing")
+    body.append("imageUrl", "")
+    body.append("method", "fallback")
+    body.append("imageFile", new File(["image-bytes"], "dress.png", {
+      type: "image/png",
+    }))
+
+    const response = await handleCreateProduct(
+      new Request("https://someday.example/api/products", {
+        method: "POST",
+        body,
+      }),
+      "user_owner",
+      {} as Env,
+      {} as ExecutionContext,
+    )
+
+    expect(response.status).toBe(403)
+  })
+
   it("rejects an unsafe product URL before using any bindings", async () => {
     const request = new Request("https://someday.example/api/product-previews", {
       method: "POST",

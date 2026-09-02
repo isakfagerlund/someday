@@ -10,9 +10,13 @@ const importPreview = importForm?.querySelector("[data-import-preview]")
 const importWarning = importForm?.querySelector("[data-import-warning]")
 const imageChoices = importForm?.querySelector("[data-image-choices]")
 const imageEmpty = importForm?.querySelector("[data-image-empty]")
-const imageLink = importForm?.querySelector("[name='imageLink']")
+const imageUpload = importForm?.querySelector("[data-image-upload]")
+const imageFile = importForm?.querySelector("[name='imageFile']")
+const imageUploadPreview = importForm?.querySelector("[data-image-upload-preview]")
+const imageUploadHint = importForm?.querySelector("[data-image-upload-hint]")
 const imagePrevious = importForm?.querySelector("[data-image-previous]")
 const imageNext = importForm?.querySelector("[data-image-next]")
+const maxUploadBytes = 20_000_000
 const productDialog = document.querySelector("#product-dialog")
 const productForm = document.querySelector("#product-form")
 const productError = productForm?.querySelector("[role='alert']")
@@ -31,6 +35,8 @@ function showError(element, error, fallback) {
 function resetImportForm() {
   importForm?.reset()
   imageChoices?.replaceChildren()
+  setUploadedImage(null)
+  if (imageUpload) imageUpload.hidden = true
   if (importError) importError.hidden = true
   if (importWarning) importWarning.hidden = true
   if (imageEmpty) imageEmpty.hidden = true
@@ -43,6 +49,62 @@ function selectImage(imageUrl) {
   if (!importForm) return
 
   importForm.elements.imageUrl.value = imageUrl
+}
+
+function setUploadedImage(file) {
+  if (!imageUpload || !imageFile || !imageUploadPreview) return
+
+  if (imageUploadPreview.src.startsWith("blob:")) {
+    URL.revokeObjectURL(imageUploadPreview.src)
+  }
+
+  if (file) {
+    const transfer = new DataTransfer()
+
+    transfer.items.add(file)
+    imageFile.files = transfer.files
+    imageUploadPreview.src = URL.createObjectURL(file)
+    selectImage("")
+  } else {
+    imageFile.value = ""
+    imageUploadPreview.removeAttribute("src")
+  }
+
+  imageUploadPreview.hidden = !file
+  imageUpload.classList.toggle("image-upload--filled", Boolean(file))
+  if (imageEmpty) imageEmpty.hidden = Boolean(file)
+
+  if (imageUploadHint) {
+    imageUploadHint.textContent = file
+      ? "Click or drop another image to replace it"
+      : "Drop an image here or click to browse"
+  }
+}
+
+function acceptUpload(file) {
+  if (!file) return
+
+  if (!file.type.startsWith("image/")) {
+    showError(importError, null, "Choose an image file.")
+    return
+  }
+
+  if (file.size > maxUploadBytes) {
+    showError(importError, null, "That image is larger than 20 MB.")
+    return
+  }
+
+  if (importError) importError.hidden = true
+  setUploadedImage(file)
+}
+
+function productUpload(fields, file) {
+  const form = new FormData()
+
+  for (const [field, value] of Object.entries(fields)) form.append(field, value)
+  form.append("imageFile", file)
+
+  return form
 }
 
 function updateCarouselControls() {
@@ -80,7 +142,6 @@ function renderImageChoice(imageUrl, selected, index) {
 
   radio.addEventListener("change", () => {
     if (!radio.checked) return
-    if (imageLink) imageLink.value = ""
     selectImage(imageUrl)
   })
   image.addEventListener("error", () => {
@@ -97,6 +158,7 @@ function renderImageChoice(imageUrl, selected, index) {
     } else {
       selectImage("")
       if (imageEmpty) imageEmpty.hidden = false
+      if (imageUpload) imageUpload.hidden = false
     }
   })
 
@@ -126,6 +188,7 @@ function showImportPreview(preview) {
   )
 
   if (imageEmpty) imageEmpty.hidden = preview.imageUrls.length > 0
+  if (imageUpload) imageUpload.hidden = preview.imageUrls.length > 0
   if (importWarning) {
     importWarning.textContent = preview.warning || ""
     importWarning.hidden = !preview.warning
@@ -206,12 +269,33 @@ productUrlInput?.addEventListener("paste", () => {
 
 imageChoices?.addEventListener("scroll", updateCarouselControls, { passive: true })
 
-imageLink?.addEventListener("input", () => {
-  for (const radio of imageChoices?.querySelectorAll("input:checked") ?? []) {
-    radio.checked = false
-  }
-  selectImage(imageLink.value.trim())
+imageFile?.addEventListener("change", () => acceptUpload(imageFile.files?.[0]))
+
+for (const eventName of ["dragenter", "dragover"]) {
+  imageUpload?.addEventListener(eventName, (event) => {
+    event.preventDefault()
+    imageUpload.classList.add("image-upload--dragging")
+  })
+}
+
+imageUpload?.addEventListener("dragleave", (event) => {
+  if (imageUpload.contains(event.relatedTarget)) return
+
+  imageUpload.classList.remove("image-upload--dragging")
 })
+
+imageUpload?.addEventListener("drop", (event) => {
+  event.preventDefault()
+  imageUpload.classList.remove("image-upload--dragging")
+  acceptUpload(event.dataTransfer?.files?.[0])
+})
+
+// Without this the browser opens an image dropped next to the upload zone.
+for (const eventName of ["dragover", "drop"]) {
+  document.addEventListener(eventName, (event) => {
+    if (importDialog?.open) event.preventDefault()
+  })
+}
 
 importForm?.addEventListener("submit", async (event) => {
   event.preventDefault()
@@ -243,23 +327,31 @@ importForm?.addEventListener("submit", async (event) => {
       const name = importForm.elements.name.value.trim()
       const brand = importForm.elements.brand.value.trim()
       const imageUrl = importForm.elements.imageUrl.value.trim()
+      const upload = imageFile?.files?.[0]
 
       if (!name || !brand) throw new Error("We couldn't identify this product.")
-      if (!imageUrl) throw new Error("Choose an image or paste an image link.")
+      if (!imageUrl && !upload) throw new Error("Choose or upload an image.")
 
-      await apiRequest("/api/products", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          sourceUrl: importForm.elements.sourceUrl.value,
-          canonicalUrl: importForm.elements.canonicalUrl.value,
-          name,
-          brand,
-          category: importForm.elements.category.value,
-          imageUrl,
-          method: importForm.elements.method.value,
-        }),
-      })
+      const fields = {
+        sourceUrl: importForm.elements.sourceUrl.value,
+        canonicalUrl: importForm.elements.canonicalUrl.value,
+        name,
+        brand,
+        category: importForm.elements.category.value,
+        imageUrl,
+        method: importForm.elements.method.value,
+      }
+
+      await apiRequest(
+        "/api/products",
+        upload
+          ? { method: "POST", body: productUpload(fields, upload) }
+          : {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify(fields),
+            },
+      )
 
       location.reload()
     }

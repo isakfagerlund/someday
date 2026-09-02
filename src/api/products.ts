@@ -17,6 +17,8 @@ const previewProductInputSchema = z
   .object({ url: z.string().trim().min(1) })
   .strict()
 
+const maxUploadBytes = 20_000_000
+
 const createProductInputSchema = z
   .object({
     sourceUrl: z.string().trim().min(1),
@@ -24,7 +26,7 @@ const createProductInputSchema = z
     name: z.string().trim().min(1).max(300),
     brand: z.string().trim().min(1).max(150),
     category: z.enum(categories),
-    imageUrl: z.string().trim().min(1),
+    imageUrl: z.string().trim(),
     method: z.enum(["direct", "fallback", "platform", "rendered", "search"]),
   })
   .strict()
@@ -61,6 +63,34 @@ async function parseJsonInput<T>(request: Request, schema: z.ZodType<T>) {
   return result.success ? result.data : null
 }
 
+/** Uploaded images arrive as multipart; picked ones as plain JSON. */
+async function parseCreateProductInput(request: Request) {
+  const contentType = request.headers.get("content-type") ?? ""
+
+  if (!contentType.includes("multipart/form-data")) {
+    const input = await parseJsonInput(request, createProductInputSchema)
+
+    return input ? { ...input, imageFile: undefined } : null
+  }
+
+  let form: FormData
+
+  try {
+    form = await request.formData()
+  } catch {
+    return null
+  }
+
+  const imageFile = form.get("imageFile")
+  form.delete("imageFile")
+
+  const input = createProductInputSchema.safeParse(Object.fromEntries(form))
+
+  if (!input.success || !(imageFile instanceof File)) return null
+
+  return { ...input.data, imageFile }
+}
+
 export async function handlePreviewProduct(
   request: Request,
   userId: string,
@@ -90,10 +120,14 @@ export async function handleCreateProduct(
   env: Env,
   ctx: ExecutionContext,
 ) {
-  const input = await parseJsonInput(request, createProductInputSchema)
+  const input = await parseCreateProductInput(request)
 
   if (!input) {
     return jsonError("Confirm the product details and choose an image.", 400)
+  }
+
+  if (input.imageFile && input.imageFile.size > maxUploadBytes) {
+    return jsonError("That image is larger than 20 MB.", 413)
   }
 
   const board = await getBoardByOwnerId(env.DB, userId)
