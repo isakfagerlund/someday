@@ -84,10 +84,10 @@ Anonymous home and board responses remain publicly cacheable. Authenticated
 HTML responses use `Cache-Control: private, no-store`, even when the user is
 viewing somebody else's board.
 
-Configure Cloudflare to bypass the HTML cache when the request contains Clerk's
-session cookie. This prevents a signed-in owner from receiving the cached public
-variant and prevents management controls from entering the public cache. Do not
-cache per-session variants and do not use `Vary: Cookie`.
+Public HTML responses send `Vary: Cookie`. Workers Cache ignores zone Cache
+Rules, so this is what prevents a signed-in owner from receiving the cached
+anonymous page. Authenticated responses are `no-store`, so management controls
+never enter the cache.
 
 Mutation responses remain uncacheable. A successful mutation purges cached
 pages for the affected board. Board-list changes also purge the cached home
@@ -107,8 +107,8 @@ page.
 6. Pass `canManage` into the board renderer and omit all management HTML and
    JavaScript when it is false.
 7. Protect product creation, update, and deletion with board ownership checks.
-8. Add the Cloudflare authenticated-cookie cache bypass and make authenticated
-   HTML private and uncacheable.
+8. Send `Vary: Cookie` on public HTML and make authenticated HTML private and
+   uncacheable.
 9. Verify the anonymous cached view, owner view, non-owner view, login redirect,
    and mutation authorization. Rely on types for the remaining coverage.
 

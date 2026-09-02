@@ -97,9 +97,9 @@ one as follows:
      "UPDATE boards SET clerk_owner_id = 'user_...' WHERE id = 'default'"
    ```
 
-6. In Cloudflare Cache Rules, add a rule after the public HTML cache rule. Match
-   `http.cookie contains "__session="` on the production hostname and set Cache
-   eligibility to **Bypass cache**. Do not add the cookie to the cache key.
+6. No Cloudflare Cache Rule is needed. The Worker uses Workers Cache, which
+   ignores zone Cache Rules, and public HTML responses send `Vary: Cookie` so
+   signed-in requests never match the cached anonymous page.
 7. Purge the old `/` page after the first release so it immediately changes from
    the former catalog to the board list.
 

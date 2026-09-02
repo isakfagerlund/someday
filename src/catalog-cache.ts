@@ -1,7 +1,10 @@
+// Workers Cache ignores zone Cache Rules, so cookies must vary the cache entry.
+// Otherwise signed-in users receive the cached anonymous page.
 const publicHtmlCacheHeaders = {
   "cache-control": "public, max-age=0, must-revalidate",
   "cloudflare-cdn-cache-control":
     "public, max-age=86400, stale-while-revalidate=604800",
+  vary: "cookie",
 } as const
 
 export const privateHtmlCacheHeaders = {
