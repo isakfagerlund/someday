@@ -3,6 +3,7 @@ import {
   defaultStreamHandler,
 } from "@tanstack/react-start/server"
 
+import { homeCacheHeaders, privateHtmlCacheHeaders } from "./catalog-cache"
 import { serveProductImage } from "./images"
 
 const start = createStartHandler(defaultStreamHandler)
@@ -27,6 +28,27 @@ export default {
       return serveProductImage(request, env.IMAGE_BUCKET)
     }
 
-    return start(request, { context: { ctx } })
+    const response = await start(request, { context: { ctx } })
+
+    return response.status === 404 ? withNotFoundCache(request, response) : response
   },
 } satisfies ExportedHandler<Env>
+
+// Unknown slugs are cached like the home page so bots probing random paths
+// do not run the Worker every time. Requests with cookies stay private.
+function withNotFoundCache(request: Request, response: Response) {
+  const headers = new Headers(response.headers)
+  const cacheHeaders = request.headers.has("cookie")
+    ? privateHtmlCacheHeaders
+    : homeCacheHeaders
+
+  for (const [name, value] of Object.entries(cacheHeaders)) {
+    headers.set(name, value)
+  }
+
+  return new Response(response.body, {
+    headers,
+    status: response.status,
+    statusText: response.statusText,
+  })
+}
