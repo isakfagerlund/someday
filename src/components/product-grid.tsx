@@ -22,7 +22,7 @@ export function ProductGrid({ products, renderActions }: ProductGridProps) {
 
   return (
     <ul
-      className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4"
+      className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4"
       role="list"
     >
       {products.map((product, index) => (

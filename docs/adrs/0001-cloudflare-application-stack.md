@@ -1,6 +1,6 @@
 # ADR 0001: Cloudflare application stack
 
-Status: Accepted
+Status: Superseded in part by ADR 0015 (frontend rendering and JavaScript)
 
 ## Context
 
