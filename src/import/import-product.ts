@@ -41,7 +41,9 @@ export interface ProductImportConfirmation {
   name: string
   brand: string
   category: Category
+  /** Empty when the user uploaded the image instead of picking a link. */
   imageUrl: string
+  imageFile?: Blob
   method: ProductImportMethod
 }
 
@@ -53,8 +55,8 @@ export class DuplicateProductError extends Error {
 }
 
 export class ProductImageImportError extends Error {
-  constructor() {
-    super("That image could not be downloaded. Choose another one.")
+  constructor(message: string) {
+    super(message)
     this.name = "ProductImageImportError"
   }
 }
@@ -144,7 +146,7 @@ async function searchPreview(
     warning:
       result.imageUrls.length > 0
         ? "This shop blocked direct access, so we found the product via search."
-        : "This shop blocked direct access. We found the details via search, but you need to paste an image link.",
+        : "This shop blocked direct access. We found the details via search, but you need to add an image yourself.",
   }
 }
 
@@ -187,7 +189,7 @@ export async function previewProduct(
         recommendedImageUrl: "",
         method: "fallback",
         warning:
-          "We could not read this shop. Paste an image link and check the details after adding.",
+          "We could not read this shop. Add an image yourself and check the details after adding.",
       }
     }
   }
@@ -259,7 +261,9 @@ export async function createProduct(
 ): Promise<CatalogProduct> {
   const sourceUrl = validateProductUrl(confirmation.sourceUrl).href
   const canonicalUrl = validateProductUrl(confirmation.canonicalUrl).href
-  const imageUrl = validateProductUrl(confirmation.imageUrl).href
+  const imageUrl = confirmation.imageFile
+    ? ""
+    : validateProductUrl(confirmation.imageUrl).href
 
   if (await productExists(env.DB, boardId, canonicalUrl)) {
     throw new DuplicateProductError()
@@ -268,7 +272,11 @@ export async function createProduct(
   let image
 
   try {
-    image = await storeProductImage(imageUrl, env.IMAGE_BUCKET, env.IMAGES)
+    image = await storeProductImage(
+      confirmation.imageFile ?? imageUrl,
+      env.IMAGE_BUCKET,
+      env.IMAGES,
+    )
   } catch (error) {
     console.error(
       JSON.stringify({
@@ -277,7 +285,11 @@ export async function createProduct(
         error: loggedError(error),
       }),
     )
-    throw new ProductImageImportError()
+    throw new ProductImageImportError(
+      confirmation.imageFile
+        ? "That image could not be used. Try another file."
+        : "That image could not be downloaded. Choose another one.",
+    )
   }
 
   try {

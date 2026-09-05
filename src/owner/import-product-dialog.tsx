@@ -2,9 +2,14 @@ import { Dialog } from "@base-ui/react/dialog"
 import { ScrollArea } from "@base-ui/react/scroll-area"
 import { useEffect, useRef, useState } from "react"
 
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "../components/icons"
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PlusIcon,
+  UploadIcon,
+} from "../components/icons"
 import type { ProductImportPreview } from "../import/import-product"
-import { createProduct, previewProduct } from "../server/products"
+import { createProduct, maxUploadBytes, previewProduct } from "../server/products"
 import {
   backdropClass,
   DialogHeading,
@@ -43,6 +48,7 @@ export function AddProductButton() {
 function ImportProductForm() {
   const [preview, setPreview] = useState<ProductImportPreview | null>(null)
   const [imageUrl, setImageUrl] = useState("")
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
@@ -77,21 +83,25 @@ function ImportProductForm() {
       if (!preview.name || !preview.brand) {
         throw new Error("We couldn't identify this product.")
       }
-      if (!imageUrl.trim()) {
-        throw new Error("Choose an image or paste an image link.")
+      if (!imageUrl.trim() && !imageFile) {
+        throw new Error("Choose or upload an image.")
       }
 
-      await createProduct({
-        data: {
-          sourceUrl: preview.sourceUrl,
-          canonicalUrl: preview.canonicalUrl,
-          name: preview.name,
-          brand: preview.brand,
-          category: preview.category,
-          imageUrl: imageUrl.trim(),
-          method: preview.method,
-        },
-      })
+      const data = new FormData()
+      const fields = {
+        sourceUrl: preview.sourceUrl,
+        canonicalUrl: preview.canonicalUrl,
+        name: preview.name,
+        brand: preview.brand,
+        category: preview.category,
+        imageUrl: imageFile ? "" : imageUrl.trim(),
+        method: preview.method,
+      }
+
+      for (const [field, value] of Object.entries(fields)) data.append(field, value)
+      if (imageFile) data.append("imageFile", imageFile)
+
+      await createProduct({ data })
       location.reload()
     } catch (caught) {
       setError(errorMessage(caught, "The product could not be added."))
@@ -120,6 +130,9 @@ function ImportProductForm() {
             imageUrls={preview.imageUrls}
             value={imageUrl}
             onChange={setImageUrl}
+            file={imageFile}
+            onFileChange={setImageFile}
+            onError={setError}
           />
           <div className="flex items-center justify-end gap-3">
             <button className={primaryButtonClass} type="submit" disabled={busy}>
@@ -165,22 +178,27 @@ function ImagePicker({
   imageUrls,
   value,
   onChange,
+  file,
+  onFileChange,
+  onError,
 }: {
   imageUrls: string[]
   value: string
   onChange: (imageUrl: string) => void
+  file: File | null
+  onFileChange: (file: File | null) => void
+  onError: (message: string | null) => void
 }) {
   const [broken, setBroken] = useState<Set<string>>(new Set())
-  const [link, setLink] = useState("")
   const usable = imageUrls.filter((url) => !broken.has(url))
   const viewportRef = useRef<HTMLDivElement>(null)
 
   // If the chosen image fails to load, fall back to the next usable one.
   useEffect(() => {
-    if (link || !broken.has(value)) return
+    if (!broken.has(value)) return
 
     onChange(usable[0] ?? "")
-  }, [broken, link, onChange, usable, value])
+  }, [broken, onChange, usable, value])
 
   function scroll(direction: -1 | 1) {
     const viewport = viewportRef.current
@@ -219,13 +237,10 @@ function ImagePicker({
                   type="radio"
                   name="imageChoice"
                   value={url}
-                  checked={!link && value === url}
+                  checked={value === url}
                   disabled={broken.has(url)}
                   aria-label={`Product image ${index + 1}`}
-                  onChange={() => {
-                    setLink("")
-                    onChange(url)
-                  }}
+                  onChange={() => onChange(url)}
                 />
                 <img
                   className="size-full object-contain"
@@ -249,25 +264,103 @@ function ImagePicker({
         </button>
       </ScrollArea.Root>
       {usable.length === 0 && (
-        <p className="mt-2 text-sm text-muted">No usable images found.</p>
+        <>
+          {!file && (
+            <p className="mt-2 text-sm text-muted">
+              We could not find an image for this product.
+            </p>
+          )}
+          <ImageUpload file={file} onChange={onFileChange} onError={onError} />
+        </>
       )}
-      <label className="mt-3 mb-2 block text-sm text-muted" htmlFor="image-link">
-        Or paste an image link
-      </label>
-      <input
-        className={`${urlInputClass} w-full`}
-        id="image-link"
-        name="imageLink"
-        type="url"
-        inputMode="url"
-        autoComplete="off"
-        placeholder="https://shop.example/photo.jpg"
-        value={link}
-        onChange={(event) => {
-          setLink(event.target.value)
-          onChange(event.target.value.trim())
-        }}
-      />
     </fieldset>
+  )
+}
+
+// Shown only when the shop exposed no usable image. Drop a file or click.
+function ImageUpload({
+  file,
+  onChange,
+  onError,
+}: {
+  file: File | null
+  onChange: (file: File | null) => void
+  onError: (message: string | null) => void
+}) {
+  const [dragging, setDragging] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!file) return setPreviewUrl(null)
+
+    const url = URL.createObjectURL(file)
+
+    setPreviewUrl(url)
+
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  function accept(candidate: File | undefined) {
+    if (!candidate) return
+    if (!candidate.type.startsWith("image/")) return onError("Choose an image file.")
+    if (candidate.size > maxUploadBytes) {
+      return onError("That image is larger than 20 MB.")
+    }
+
+    onError(null)
+    onChange(candidate)
+  }
+
+  return (
+    <div
+      className="relative mt-2"
+      onDragEnter={(event) => {
+        event.preventDefault()
+        setDragging(true)
+      }}
+      onDragOver={(event) => {
+        event.preventDefault()
+        setDragging(true)
+      }}
+      onDragLeave={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node)) return
+        setDragging(false)
+      }}
+      onDrop={(event) => {
+        event.preventDefault()
+        setDragging(false)
+        accept(event.dataTransfer.files[0])
+      }}
+    >
+      <input
+        className="peer absolute size-px border-0 p-0 opacity-0"
+        id="image-file"
+        name="imageFile"
+        type="file"
+        accept="image/*"
+        onChange={(event) => accept(event.target.files?.[0])}
+      />
+      <label
+        className={`grid min-h-44 cursor-pointer content-center justify-items-center gap-4 rounded-xl border border-dashed border-border bg-bg p-6 text-center transition-[background,border-color] duration-[140ms] ease-out peer-focus-visible:outline-2 peer-focus-visible:outline-offset-3 peer-focus-visible:outline-current hover:border-muted hover:bg-surface ${dragging ? "border-solid border-text bg-surface" : ""}`}
+        htmlFor="image-file"
+      >
+        {previewUrl && (
+          <img
+            className="max-h-56 max-w-full rounded-lg object-contain"
+            src={previewUrl}
+            alt="Selected image"
+          />
+        )}
+        <span className="grid justify-items-center gap-1 text-sm font-normal text-muted">
+          {!file && <UploadIcon className="mb-2 size-7 fill-current" />}
+          {!file && <span className="font-semibold text-text">Upload your own image</span>}
+          <span>
+            {file
+              ? "Click or drop another image to replace it"
+              : "Drop an image here or click to browse"}
+          </span>
+        </span>
+      </label>
+    </div>
   )
 }

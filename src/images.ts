@@ -265,16 +265,17 @@ async function fetchSourceImage(imageUrl: string, fetcher: ProductFetcher) {
   return fetchImage(imageUrl, fetcher)
 }
 
+/** Accepts a link to download or an image the user uploaded themselves. */
 export async function storeProductImage(
-  imageUrl: string,
+  image: string | Blob,
   bucket: R2Bucket,
   images: ImagesBinding,
   fetcher: ProductFetcher = fetch,
 ) {
-  const { contentType: sourceContentType, source } = await fetchSourceImage(
-    imageUrl,
-    fetcher,
-  )
+  const { contentType: sourceContentType, source } =
+    typeof image === "string"
+      ? await fetchSourceImage(image, fetcher)
+      : { contentType: image.type || undefined, source: image }
   const imageKey = crypto.randomUUID()
   const { backgroundRemoved, variants } = await renderVariants(source, images)
 

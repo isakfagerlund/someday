@@ -15,6 +15,34 @@ import { getViewerId, requireOwnedBoard } from "./viewer"
 
 const productIdInput = z.object({ id: z.uuid() })
 
+export const maxUploadBytes = 20_000_000
+
+const createProductFields = z.object({
+  sourceUrl: z.string().trim().min(1),
+  canonicalUrl: z.string().trim().min(1),
+  name: z.string().trim().min(1).max(300),
+  brand: z.string().trim().min(1).max(150),
+  category: z.enum(categories),
+  imageUrl: z.string().trim(),
+  method: z.enum(["direct", "fallback", "platform", "rendered", "search"]),
+})
+
+// Multipart so an uploaded image can travel with the fields. imageFile is
+// absent when the curator picked one of the shop's images instead.
+function parseCreateProductInput(form: FormData) {
+  const imageFile = form.get("imageFile")
+
+  form.delete("imageFile")
+
+  const fields = createProductFields.parse(Object.fromEntries(form))
+
+  if (imageFile instanceof File && imageFile.size > maxUploadBytes) {
+    throw new Error("That image is larger than 20 MB.")
+  }
+
+  return { ...fields, imageFile: imageFile instanceof File ? imageFile : undefined }
+}
+
 export const previewProduct = createServerFn({ method: "POST" })
   .validator(z.object({ url: z.string().trim().min(1) }))
   .handler(async ({ data }) => {
@@ -24,17 +52,7 @@ export const previewProduct = createServerFn({ method: "POST" })
   })
 
 export const createProduct = createServerFn({ method: "POST" })
-  .validator(
-    z.object({
-      sourceUrl: z.string().trim().min(1),
-      canonicalUrl: z.string().trim().min(1),
-      name: z.string().trim().min(1).max(300),
-      brand: z.string().trim().min(1).max(150),
-      category: z.enum(categories),
-      imageUrl: z.string().trim().min(1),
-      method: z.enum(["direct", "fallback", "platform", "rendered", "search"]),
-    }),
-  )
+  .validator((form: FormData) => parseCreateProductInput(form))
   .handler(async ({ data, context }) => {
     const { board } = await requireOwnedBoard()
     const product = await importProduct(data, board.id, env)
