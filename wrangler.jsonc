@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "someday",
-  "main": "src/index.ts",
+  "main": "src/server.ts",
   "compatibility_date": "2026-08-29",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {
@@ -17,9 +17,6 @@
       "CLERK_PUBLISHABLE_KEY",
       "CLERK_JWT_KEY"
     ]
-  },
-  "assets": {
-    "directory": "./public/"
   },
   "browser": {
     "binding": "BROWSER",

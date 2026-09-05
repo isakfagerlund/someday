@@ -1,6 +1,6 @@
 # ADR 0014: Clerk authentication and public boards
 
-Status: Accepted
+Status: Accepted, amended by ADR 0015 (home page account menu)
 
 Supersedes ADR 0006, ADR 0009, and ADR 0010.
 

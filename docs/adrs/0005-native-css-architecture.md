@@ -1,6 +1,6 @@
 # ADR 0005: Native CSS architecture
 
-Status: Accepted
+Status: Superseded by ADR 0015
 
 ## Context
 

@@ -32,3 +32,9 @@ export function uniqueBoardSlug(name: string, existingSlugs: string[]) {
 
   return slug
 }
+
+export function isBoardSlug(value: string) {
+  return (
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) && !reservedBoardSlugs.has(value)
+  )
+}
