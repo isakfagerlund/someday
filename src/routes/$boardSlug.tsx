@@ -1,28 +1,14 @@
-import { createFileRoute, notFound } from "@tanstack/react-router"
-import { createServerFn } from "@tanstack/react-start"
-import { env } from "cloudflare:workers"
+import { createFileRoute } from "@tanstack/react-router"
+import { lazy, Suspense } from "react"
 
-import { boardCacheHeaders } from "../catalog-cache"
-import { CategoryFilters } from "../components/category-filters"
+import { boardCacheHeaders, privateHtmlCacheHeaders } from "../catalog-cache"
+import { BoardLayout } from "../components/board-layout"
 import { ProductGrid } from "../components/product-grid"
-import { getBoardBySlug } from "../db/boards"
-import { listProducts } from "../db/products"
-import { isBoardSlug } from "../domain/board"
 import { type Category, isCategory } from "../domain/product"
+import { loadBoard } from "../server/pages"
 
-const loadBoardPage = createServerFn()
-  .validator((input: { slug: string; category: Category | null }) => input)
-  .handler(async ({ data: { slug, category } }) => {
-    const board = isBoardSlug(slug)
-      ? await getBoardBySlug(env.DB, slug)
-      : undefined
-
-    if (!board) throw notFound()
-
-    const products = await listProducts(env.DB, board.id, category)
-
-    return { board, products }
-  })
+// Owner controls, Clerk and Base UI load only for the board's owner.
+const OwnerBoard = lazy(() => import("../owner/owner-board"))
 
 export const Route = createFileRoute("/$boardSlug")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -32,10 +18,14 @@ export const Route = createFileRoute("/$boardSlug")({
   }),
   loaderDeps: ({ search }) => ({ category: search.category ?? null }),
   loader: ({ params, deps }) =>
-    loadBoardPage({ data: { slug: params.boardSlug, category: deps.category } }),
+    loadBoard({ data: { slug: params.boardSlug, category: deps.category } }),
   // Cache headers live on the route so the document response carries them.
   headers: ({ loaderData }) =>
-    loaderData ? boardCacheHeaders(loaderData.board.id) : undefined,
+    !loaderData
+      ? undefined
+      : loaderData.signedIn
+        ? privateHtmlCacheHeaders
+        : boardCacheHeaders(loaderData.board.id),
   head: ({ loaderData, match }) => ({
     meta: [
       {
@@ -49,20 +39,25 @@ export const Route = createFileRoute("/$boardSlug")({
 })
 
 function BoardPage() {
-  const { board, products } = Route.useLoaderData()
+  const { board, canManage, clerkPublishableKey, products } =
+    Route.useLoaderData()
   const { category = null } = Route.useSearch()
+  const publicBoard = (
+    <BoardLayout board={board} category={category}>
+      <ProductGrid products={products} />
+    </BoardLayout>
+  )
+
+  if (!canManage) return publicBoard
 
   return (
-    <main className="wrapper flex flex-col gap-8 py-[clamp(3rem,9vw,7rem)]">
-      <div className="flex items-center justify-between gap-3">
-        <h1>
-          <a className="focus-ring no-underline" href="/">
-            {board.name}
-          </a>
-        </h1>
-      </div>
-      <CategoryFilters activeCategory={category} boardSlug={board.slug} />
-      <ProductGrid products={products} />
-    </main>
+    <Suspense fallback={publicBoard}>
+      <OwnerBoard
+        board={board}
+        category={category}
+        clerkPublishableKey={clerkPublishableKey}
+        products={products}
+      />
+    </Suspense>
   )
 }

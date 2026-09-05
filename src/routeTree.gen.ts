@@ -9,38 +9,65 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as BoardSlugRouteImport } from './routes/$boardSlug'
+import { Route as AuthRedirectRouteImport } from './routes/auth.redirect'
 
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BoardSlugRoute = BoardSlugRouteImport.update({
   id: '/$boardSlug',
   path: '/$boardSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRedirectRoute = AuthRedirectRouteImport.update({
+  id: '/auth/redirect',
+  path: '/auth/redirect',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/$boardSlug': typeof BoardSlugRoute
+  '/auth/redirect': typeof AuthRedirectRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/$boardSlug': typeof BoardSlugRoute
+  '/auth/redirect': typeof AuthRedirectRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/$boardSlug': typeof BoardSlugRoute
+  '/auth/redirect': typeof AuthRedirectRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/$boardSlug'
+  fullPaths: '/' | '/$boardSlug' | '/auth/redirect'
   fileRoutesByTo: FileRoutesByTo
-  to: '/$boardSlug'
-  id: '__root__' | '/$boardSlug'
+  to: '/' | '/$boardSlug' | '/auth/redirect'
+  id: '__root__' | '/' | '/$boardSlug' | '/auth/redirect'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   BoardSlugRoute: typeof BoardSlugRoute
+  AuthRedirectRoute: typeof AuthRedirectRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$boardSlug': {
       id: '/$boardSlug'
       path: '/$boardSlug'
@@ -48,11 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BoardSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/redirect': {
+      id: '/auth/redirect'
+      path: '/auth/redirect'
+      fullPath: '/auth/redirect'
+      preLoaderRoute: typeof AuthRedirectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   BoardSlugRoute: BoardSlugRoute,
+  AuthRedirectRoute: AuthRedirectRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

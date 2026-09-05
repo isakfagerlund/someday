@@ -1,3 +1,5 @@
+import { useEffect } from "react"
+
 import { categories, type Category } from "../domain/product"
 import { CategoryIcon } from "./icons"
 
@@ -13,6 +15,13 @@ export function CategoryFilters({
   activeCategory,
   boardSlug,
 }: CategoryFiltersProps) {
+  // Keep the active filter visible when the list scrolls horizontally.
+  useEffect(() => {
+    document
+      .querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ block: "nearest", inline: "center" })
+  }, [])
+
   const boardPath = `/${encodeURIComponent(boardSlug)}`
   const filters: Array<{ category: Category | null; label: string }> = [
     { category: null, label: "All" },
