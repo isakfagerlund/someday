@@ -115,10 +115,17 @@ jobs:
             ((page += 1))
           done
 
+          # A version can already be gone, or be the live one; neither should
+          # fail the cleanup, so only non-404 errors abort.
           for version_id in "${version_ids[@]}"; do
-            curl --fail --silent --show-error --request DELETE \
+            status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request DELETE \
               --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/workers/$worker_id/versions/$version_id"
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/workers/$worker_id/versions/$version_id")"
+
+            case "$status" in
+              2??|404) echo "version $version_id: $status" ;;
+              *) echo "version $version_id: HTTP $status" >&2; exit 1 ;;
+            esac
           done
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
