@@ -235,7 +235,7 @@ async function readImage(response: Response) {
     reader.releaseLock()
   }
 
-  return new Blob(chunks)
+  return new Blob(chunks as BlobPart[])
 }
 
 async function fetchImage(imageUrl: string, fetcher: ProductFetcher) {

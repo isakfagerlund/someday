@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "vite dev",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
     "db:check": "drizzle-kit check",
@@ -12,19 +12,32 @@
     "types": "wrangler types",
     "types:check": "wrangler types --check",
     "typecheck": "tsc --noEmit",
-    "check": "npm run types:check && npm run typecheck && npm run db:check && npm test"
+    "check": "npm run types:check && npm run typecheck && npm run db:check && npm test && npm run build",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@clerk/backend": "^3.16.13",
+    "@tanstack/react-router": "^1.170.32",
+    "@tanstack/react-start": "^1.168.49",
     "drizzle-orm": "1.0.0-rc.4",
     "openai": "^7.8.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "zod": "^4.5.2"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.54.4",
     "@cloudflare/vitest-plugin": "^1.1.2",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
     "drizzle-kit": "1.0.0-rc.4",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.9.2",
+    "vite": "^8.2.2",
     "vitest": "^4.1.11",
     "wrangler": "^4.127.1"
   }
