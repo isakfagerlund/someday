@@ -5,9 +5,9 @@ A small server-rendered product catalog on Cloudflare Workers.
 ## Development
 
 ```sh
-npm install
-npm run db:migrate:local
-npm run dev
+pnpm install
+pnpm run db:migrate:local
+pnpm run dev
 ```
 
 Local development uses these values in `.dev.vars`:
