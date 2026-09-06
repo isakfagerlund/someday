@@ -2,6 +2,7 @@ import { ClerkProvider, SignInButton, SignUpButton, UserButton } from "@clerk/ta
 import { Dialog } from "@base-ui/react/dialog"
 import { useState } from "react"
 
+import { ArrowRightIcon, PlusIcon } from "../components/icons"
 import { LandingIntro } from "../components/landing-intro"
 import type { Board } from "../db/boards"
 import { boardSlugFromName } from "../domain/board"
@@ -36,22 +37,28 @@ export default function HomeAccount({
     <ClerkProvider publishableKey={clerkPublishableKey}>
       <LandingIntro
         account={signedIn ? (
-          <nav className="flex items-center gap-5" aria-label="Your account">
-            {boardPath && <a className="focus-ring flex min-h-11 items-center text-sm font-medium no-underline" href={boardPath}>My board</a>}
-            <UserButton />
-          </nav>
+          <UserButton
+            showName
+            appearance={{
+              elements: {
+                userButtonAvatarBox: { display: "none" },
+                userButtonOuterIdentifier: "text-sm font-medium text-text",
+                userButtonTrigger: "pressable focus-ring min-h-11 cursor-pointer px-2 hover:opacity-70",
+              },
+            }}
+          />
         ) : (
           <SignInButton mode="modal" forceRedirectUrl="/auth/redirect">
             <button className="pressable focus-ring min-h-11 cursor-pointer px-2 text-sm font-medium hover:opacity-70" type="button">Sign in</button>
           </SignInButton>
         )}
         action={boardPath ? (
-          <a className={actionClass} href={boardPath}>Go to my board <span aria-hidden="true">↗</span></a>
+          <a className={actionClass} href={boardPath}>Go to my board <ArrowRightIcon className="size-5 fill-current" /></a>
         ) : signedIn ? (
-          <button className={actionClass} type="button" onClick={() => setCreating(true)}>Create your board <span aria-hidden="true">↗</span></button>
+          <button className={actionClass} type="button" onClick={() => setCreating(true)}>Create your board <PlusIcon className="size-5 fill-current" /></button>
         ) : (
           <SignUpButton mode="modal" forceRedirectUrl="/auth/redirect">
-            <button className={actionClass} type="button">Create your board <span aria-hidden="true">↗</span></button>
+            <button className={actionClass} type="button">Create your board <PlusIcon className="size-5 fill-current" /></button>
           </SignUpButton>
         )}
       />

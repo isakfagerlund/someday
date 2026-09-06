@@ -1,18 +1,25 @@
 import type { CatalogProduct } from "../domain/product"
 
 interface ProductGridProps {
+  addedProductId?: string
   products: CatalogProduct[]
   renderActions?: (product: CatalogProduct) => React.ReactNode
 }
 
-export function ProductGrid({ products, renderActions }: ProductGridProps) {
+export function ProductGrid({
+  products,
+  renderActions,
+  addedProductId,
+}: ProductGridProps) {
   if (products.length === 0) {
     return (
       <section
         className="flex min-h-80 flex-col items-center justify-center gap-2 px-4 py-12 text-center"
         aria-labelledby="empty-state-title"
       >
-        <h2 className="font-medium" id="empty-state-title">No products yet</h2>
+        <h2 className="font-medium" id="empty-state-title">
+          No products yet
+        </h2>
         <p className="text-muted">
           Products will appear here after the first link is added.
         </p>
@@ -26,7 +33,13 @@ export function ProductGrid({ products, renderActions }: ProductGridProps) {
       role="list"
     >
       {products.map((product, index) => (
-        <li key={product.id}>
+        <li
+          key={product.id}
+          id={`product-${product.id}`}
+          className={
+            product.id === addedProductId ? "product-arrival" : undefined
+          }
+        >
           <article className="group relative">
             <ProductCard product={product} priority={index === 0} />
             {renderActions?.(product)}

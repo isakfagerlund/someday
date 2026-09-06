@@ -27,7 +27,7 @@ function HomePage() {
   const data = Route.useLoaderData()
 
   return (
-    <main className="mx-auto min-h-svh w-[min(100%-3rem,68rem)] md:w-[min(100%-5rem,68rem)]">
+    <main className="wrapper min-h-svh">
       <Suspense fallback={<LandingIntro action={<span className="inline-block h-12" />} />}>
         <HomeAccount {...data} />
       </Suspense>

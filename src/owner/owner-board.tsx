@@ -1,4 +1,6 @@
 import { ClerkProvider } from "@clerk/tanstack-react-start"
+import { useRouter } from "@tanstack/react-router"
+import { useState } from "react"
 
 import { BoardLayout } from "../components/board-layout"
 import { ProductGrid } from "../components/product-grid"
@@ -21,11 +23,50 @@ export default function OwnerBoard({
   clerkPublishableKey,
   products,
 }: OwnerBoardProps) {
+  const router = useRouter()
+  const [added, setAdded] = useState<CatalogProduct[]>([])
+  const visibleProducts = [
+    ...added.filter(
+      (product) =>
+        (!category || product.category === category) &&
+        !products.some((existing) => existing.id === product.id),
+    ),
+    ...products,
+  ]
+
+  async function onAdded(product: CatalogProduct) {
+    setAdded((current) => [
+      product,
+      ...current.filter((item) => item.id !== product.id),
+    ])
+    if (category && category !== product.category) {
+      await router.navigate({
+        to: "/$boardSlug",
+        params: { boardSlug: board.slug },
+        search: { category: undefined },
+      })
+    }
+    await router.invalidate()
+    requestAnimationFrame(() =>
+      document.getElementById(`product-${product.id}`)?.scrollIntoView({
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "center",
+      }),
+    )
+  }
+
   return (
     <ClerkProvider publishableKey={clerkPublishableKey}>
-      <BoardLayout board={board} category={category} action={<AddProductButton />}>
+      <BoardLayout
+        board={board}
+        category={category}
+        action={<AddProductButton onAdded={onAdded} />}
+      >
         <ProductGrid
-          products={products}
+          products={visibleProducts}
+          addedProductId={added[0]?.id}
           renderActions={(product) => <EditProductButton product={product} />}
         />
       </BoardLayout>

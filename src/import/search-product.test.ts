@@ -67,7 +67,7 @@ describe("searchProduct", () => {
       tool_choice: "required",
       tools: [
         {
-          type: "web_search_preview",
+          type: "web_search",
           search_content_types: ["text", "image"],
           search_context_size: "medium",
         },

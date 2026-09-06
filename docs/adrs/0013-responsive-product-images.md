@@ -12,17 +12,21 @@ one small copy would look soft on high-density screens.
 ## Decision
 
 Import the largest declared candidate selected by GPT-5.6 Luna and keep that
-source privately in R2. Use Cloudflare Images foreground segmentation to remove
-the background, trim the transparent border, and center the subject in a
-transparent 4:5 canvas. The subject occupies at most 80% of the canvas width or
-height.
+source privately in R2. Inspect a 64x64 RGBA sample before background removal.
+If at least 10% of the sample and 75% of its perimeter are nearly transparent,
+preserve the existing cutout. Otherwise use Cloudflare Images foreground
+segmentation. The check uses decoded pixels, regardless of file extension.
 
-Create 360x450, 720x900, and 1080x1350 WebP files at quality 85. The card's CSS
+Trim only transparent border pixels and center the subject in a transparent
+4:5 canvas. The subject occupies at most 80% of the canvas width or height.
+
+Create 360x450, 720x900, and 1080x1350 WebP files at quality 92. The card's CSS
 sets the color visible behind the transparent files.
 
 Store the original URL, processed image key, background-removal result, subject
-scale, and subject position with the product. If foreground segmentation fails,
-create the same responsive variants from the original image with automatic
+scale, and subject position with the product. `backgroundRemoved` records whether
+we ran segmentation successfully; it is false for preserved cutouts. If image
+processing fails, create the same responsive variants from the original image with automatic
 cropping. If a stored variant is missing, the image route returns the retained
 original.
 

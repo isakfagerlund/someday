@@ -26,15 +26,20 @@ export const Route = createFileRoute("/$boardSlug")({
       : loaderData.signedIn
         ? privateHtmlCacheHeaders
         : boardCacheHeaders(loaderData.board.id),
-  head: ({ loaderData, match }) => ({
-    meta: [
-      {
-        title: match.search.category
-          ? `${match.search.category} · ${loaderData?.board.name}`
-          : loaderData?.board.name,
-      },
-    ],
-  }),
+  head: ({ loaderData, match }) => {
+    const pageName = match.search.category
+      ? `${match.search.category} · ${loaderData?.board.name}`
+      : loaderData?.board.name
+    const title = `${pageName} · someday`
+
+    return {
+      meta: [
+        { title },
+        { property: "og:title", content: title },
+        { name: "twitter:title", content: title },
+      ],
+    }
+  },
   component: BoardPage,
 })
 

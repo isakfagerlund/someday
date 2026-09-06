@@ -135,21 +135,80 @@
 
 @utility carousel-control {
   display: grid;
-  position: absolute;
-  z-index: 1;
-  top: 50%;
   width: 2.75rem;
   height: 2.75rem;
   padding: 0;
   place-items: center;
   color: var(--color-text);
-  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
-  border: 1px solid var(--color-border);
+  background: transparent;
+  border: 0;
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-control);
   cursor: pointer;
-  transform: translateY(-50%);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
+  visibility: hidden;
+
+  &:hover { background: var(--color-bg); }
+  &:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+}
+
+/* One container changes shape throughout the import. Its contents are measured
+   so errors, uploads and smaller screens can change the height naturally. */
+.import-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  width: min(100vw - 2rem, 34rem);
+  max-height: calc(100dvh - 2rem);
+  overflow: hidden auto;
+  border-radius: 28px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 4px 16px -4px rgb(0 0 0 / 0.12), 0 16px 32px -12px rgb(0 0 0 / 0.12);
+  outline: none;
+  transition: width 300ms var(--ease-out), height 300ms var(--ease-out), border-radius 300ms var(--ease-out), opacity 160ms ease-out, scale 160ms ease-out;
+}
+.import-dialog[data-starting-style],
+.import-dialog[data-ending-style] { opacity: 0; scale: 0.98; }
+.import-dialog[data-phase="finding"] { width: min(100vw - 2rem, 25rem); border-radius: 40px; }
+.import-dialog[data-phase="saving"],
+.import-dialog[data-phase="saved"] { width: min(100vw - 2rem, 22rem); border-radius: 32px; }
+.import-content { padding: 24px; }
+.import-dialog[data-phase="finding"] .import-content { padding: 18px 20px; }
+.import-hero {
+  position: relative;
+  height: min(32dvh, 260px);
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--color-bg);
+  isolation: isolate;
+}
+.import-hero img { position: absolute; width: 100%; height: 100%; object-fit: contain; }
+.import-original { opacity: 1; transition: opacity 650ms var(--ease-out); }
+.import-cutout { opacity: 0; transition: opacity 650ms var(--ease-out); }
+.import-hero[data-revealed="true"] .import-original { opacity: 0; }
+.import-hero[data-revealed="true"] .import-cutout { opacity: 1; }
+.import-image-glow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 25%, rgb(255 255 255 / 0.35) 50%, transparent 75%);
+  animation: import-sheen 2.4s ease-in-out infinite;
+}
+.import-spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 2px solid color-mix(in srgb, currentColor 15%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: import-spin 800ms linear infinite;
+}
+.import-spinner-small { width: 16px; height: 16px; }
+.product-arrival { animation: product-arrival 450ms var(--ease-out) both; }
+@keyframes import-spin { to { rotate: 360deg; } }
+@keyframes import-sheen { from { translate: -100% 0; } to { translate: 100% 0; } }
+@keyframes product-arrival { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .import-dialog, .import-hero img { transition: none; }
+  .import-spinner, .import-image-glow, .product-arrival { animation: none; }
+  .import-image-glow { display: none; }
 }

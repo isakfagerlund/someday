@@ -1,3 +1,4 @@
+import { hasTransparentBackground } from "./image-transparency"
 import { fetchPublicResource, type ProductFetcher } from "./import/product-url"
 
 const maxSourceBytes = 20_000_000
@@ -100,19 +101,37 @@ async function masterSize(source: Blob, images: ImagesBinding) {
   }
 }
 
+export async function isTransparentImage(source: Blob, images: ImagesBinding) {
+  // Squeeze avoids adding transparent padding that would bias the check.
+  const sample = await images
+    .input(source.stream())
+    .transform({ width: 64, height: 64, fit: "squeeze" })
+    .output({ format: "rgba", anim: false })
+  const pixels = new Uint8Array(
+    await new Response(sample.image()).arrayBuffer(),
+  )
+  return hasTransparentBackground(pixels, 64, 64)
+}
+
 /**
- * Segments the product once and centres it on a transparent canvas. Every
- * variant is then a plain downscale of this master, which keeps the framing
+ * Preserves an existing cutout or segments once, then centres it on a transparent
+ * canvas. Each variant is a plain downscale of this master, keeping the framing
  * identical and antialiases the segmentation edge.
  */
-async function renderCutoutMaster(source: Blob, images: ImagesBinding) {
+async function renderCutoutMaster(
+  source: Blob,
+  images: ImagesBinding,
+  removeBackground: boolean,
+) {
   const { width, height } = await masterSize(source, images)
   const innerWidth = Math.round(width * subjectScale)
   const innerHeight = Math.round(height * subjectScale)
-  const subject = images
-    .input(source.stream())
-    .transform({ segment: "foreground" })
-    .transform({ trim: "border" })
+  const input = images.input(source.stream())
+  const foreground = removeBackground
+    ? input.transform({ segment: "foreground" })
+    : input
+  const subject = foreground
+    .transform({ trim: { border: { color: "rgba(0,0,0,0)", tolerance: 0 } } })
     .transform({
       width: innerWidth,
       height: innerHeight,
@@ -160,7 +179,8 @@ function renderOriginalVariant(
 
 async function renderVariants(source: Blob, images: ImagesBinding) {
   try {
-    const master = await renderCutoutMaster(source, images)
+    const backgroundRemoved = !(await isTransparentImage(source, images))
+    const master = await renderCutoutMaster(source, images, backgroundRemoved)
     const variants = await Promise.all(
       productImageVariants.map(async (variant) => ({
         width: variant.width,
@@ -168,7 +188,7 @@ async function renderVariants(source: Blob, images: ImagesBinding) {
       })),
     )
 
-    return { backgroundRemoved: true, variants }
+    return { backgroundRemoved, variants }
   } catch (error) {
     console.error(
       JSON.stringify({
@@ -191,7 +211,9 @@ async function renderVariants(source: Blob, images: ImagesBinding) {
 async function readImage(response: Response) {
   if (!response.ok) {
     await response.body?.cancel()
-    throw new ProductImageError(`Product image returned HTTP ${response.status}`)
+    throw new ProductImageError(
+      `Product image returned HTTP ${response.status}`,
+    )
   }
 
   const contentLength = Number(response.headers.get("content-length"))
@@ -355,5 +377,7 @@ export async function serveProductImage(
     headers.set("cache-control", "public, max-age=31536000, immutable")
   }
 
-  return new Response(request.method === "HEAD" ? null : image.body, { headers })
+  return new Response(request.method === "HEAD" ? null : image.body, {
+    headers,
+  })
 }

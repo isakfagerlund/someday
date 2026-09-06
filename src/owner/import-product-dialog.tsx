@@ -1,6 +1,6 @@
 import { Dialog } from "@base-ui/react/dialog"
 import { ScrollArea } from "@base-ui/react/scroll-area"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 
 import {
   ChevronLeftIcon,
@@ -8,25 +8,39 @@ import {
   PlusIcon,
   UploadIcon,
 } from "../components/icons"
+import type { CatalogProduct } from "../domain/product"
 import type { ProductImportPreview } from "../import/import-product"
-import { createProduct, maxUploadBytes, previewProduct } from "../server/products"
+import {
+  createProduct,
+  maxUploadBytes,
+  previewProduct,
+} from "../server/products"
 import {
   backdropClass,
   DialogHeading,
   ErrorMessage,
   errorMessage,
-  popupClass,
   primaryButtonClass,
 } from "./ui"
 
 const urlInputClass =
   "focus-ring h-11 min-w-0 flex-1 rounded-pill border border-border bg-surface px-4 text-text"
 
-export function AddProductButton() {
+export function AddProductButton({
+  onAdded,
+}: {
+  onAdded: (product: CatalogProduct) => void
+}) {
   const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!saving) setOpen(next)
+      }}
+    >
       <Dialog.Trigger
         className="pressable focus-ring grid size-12 translate-y-0.5 cursor-pointer place-items-center rounded-full border-0 bg-text p-0 text-bg hover:scale-[1.04]"
         aria-label="Add product"
@@ -35,25 +49,90 @@ export function AddProductButton() {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Backdrop className={backdropClass} />
-        <Dialog.Popup className={`${popupClass} w-[min(100%-2rem,44rem)]`}>
-          {open && <ImportProductForm />}
-        </Dialog.Popup>
+        <ImportProductForm
+          onSaving={setSaving}
+          onAdded={(product) => {
+            onAdded(product)
+            setSaving(false)
+            setOpen(false)
+          }}
+        />
       </Dialog.Portal>
     </Dialog.Root>
   )
 }
 
-// Two steps: paste a URL, then confirm the preview and pick an image. The
-// URL step disappears once the preview arrives.
-function ImportProductForm() {
+function ImportProductForm({
+  onSaving,
+  onAdded,
+}: {
+  onSaving: (saving: boolean) => void
+  onAdded: (product: CatalogProduct) => void
+}) {
   const [preview, setPreview] = useState<ProductImportPreview | null>(null)
   const [imageUrl, setImageUrl] = useState("")
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
+  const requestPending = useRef(false)
+  const [sourceUrl, setSourceUrl] = useState("")
+  const [saved, setSaved] = useState<CatalogProduct | null>(null)
+  const [revealed, setRevealed] = useState(false)
+  const [slow, setSlow] = useState(false)
+  const [height, setHeight] = useState<number>()
+  const [uploadUrl, setUploadUrl] = useState("")
+  const phase = saved
+    ? "saved"
+    : busy
+      ? preview
+        ? "saving"
+        : "finding"
+      : preview
+        ? "choosing"
+        : "url"
+
+  useLayoutEffect(() => {
+    const form = formRef.current
+    if (!form) return
+    const observer = new ResizeObserver(() =>
+      setHeight(form.getBoundingClientRect().height),
+    )
+    observer.observe(form)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!imageFile) return setUploadUrl("")
+    const url = URL.createObjectURL(imageFile)
+    setUploadUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [imageFile])
+
+  useEffect(() => {
+    setSlow(false)
+    if (!busy) return
+    const timer = setTimeout(() => setSlow(true), 10000)
+    return () => clearTimeout(timer)
+  }, [busy, preview])
+
+  useEffect(() => {
+    if (!saved) return
+    // A failed image load must never trap a successfully saved product.
+    const timer = setTimeout(() => onAdded(saved), revealed ? 1300 : 5000)
+    return () => clearTimeout(timer)
+  }, [saved, revealed, onAdded])
+
+  useEffect(() => {
+    if (phase === "choosing")
+      formRef.current
+        ?.querySelector<HTMLButtonElement>("button[type=submit]")
+        ?.focus({ preventScroll: true })
+  }, [phase])
 
   async function loadPreview(url: string) {
+    if (requestPending.current) return
+    requestPending.current = true
     setError(null)
     setBusy(true)
 
@@ -66,15 +145,17 @@ function ImportProductForm() {
       setError(errorMessage(caught, "The product could not be added."))
     } finally {
       setBusy(false)
+      requestPending.current = false
     }
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const form = new FormData(event.currentTarget)
-
-    if (!preview) return loadPreview(String(form.get("url")))
+    if (requestPending.current || saved) return
+    if (!preview) return loadPreview(sourceUrl)
+    requestPending.current = true
+    onSaving(true)
 
     setError(null)
     setBusy(true)
@@ -98,79 +179,191 @@ function ImportProductForm() {
         method: preview.method,
       }
 
-      for (const [field, value] of Object.entries(fields)) data.append(field, value)
+      for (const [field, value] of Object.entries(fields))
+        data.append(field, value)
       if (imageFile) data.append("imageFile", imageFile)
 
-      await createProduct({ data })
-      location.reload()
+      const product = await createProduct({ data })
+      setSaved(product)
     } catch (caught) {
       setError(errorMessage(caught, "The product could not be added."))
       setBusy(false)
+      requestPending.current = false
+      onSaving(false)
     }
   }
 
   return (
-    <form
-      className="flex max-h-[calc(100vh-2rem)] flex-col overflow-y-auto p-6"
-      ref={formRef}
-      aria-busy={busy || undefined}
-      onSubmit={submit}
+    <Dialog.Popup
+      className="import-dialog"
+      data-phase={phase}
+      style={{ height }}
     >
-      <DialogHeading className="mb-2" closeLabel="Close add product dialog">
-        Add product
-      </DialogHeading>
-      {preview ? (
-        <section className="grid gap-2">
-          {preview.warning && (
-            <p className="mt-3 text-sm text-muted" role="status">
-              {preview.warning}
-            </p>
-          )}
-          <ImagePicker
-            imageUrls={preview.imageUrls}
-            value={imageUrl}
-            onChange={setImageUrl}
-            file={imageFile}
-            onFileChange={setImageFile}
-            onError={setError}
-          />
-          <div className="flex items-center justify-end gap-3">
-            <button className={primaryButtonClass} type="submit" disabled={busy}>
-              {busy ? "Adding…" : "Add product"}
-            </button>
-          </div>
-        </section>
-      ) : (
-        <div>
-          <p className="mb-6 text-muted">Paste a link and we'll find the product</p>
-          <label className="mb-2 block text-sm font-semibold" htmlFor="product-url">
-            Product URL
-          </label>
-          <div className="flex gap-2">
-            <input
-              className={urlInputClass}
-              id="product-url"
-              name="url"
-              type="url"
-              inputMode="url"
-              autoComplete="url"
-              placeholder="https://shop.example/product"
-              autoFocus
-              required
-              onPaste={() => setTimeout(() => formRef.current?.requestSubmit())}
-            />
-            <button
-              className={`${primaryButtonClass} h-11 py-0`}
-              type="submit"
-              disabled={busy}
-            >
-              {busy ? "Loading…" : "Load"}
-            </button>
-          </div>
+      <form
+        className="import-content"
+        ref={formRef}
+        aria-busy={(busy && !saved) || undefined}
+        onSubmit={submit}
+      >
+        <div
+          className={
+            phase === "finding" || phase === "saving" || phase === "saved"
+              ? "sr-only"
+              : ""
+          }
+        >
+          <DialogHeading
+            className="mb-2"
+            closeLabel={busy || saved ? undefined : "Close add product dialog"}
+          >
+            {preview ? "Make it yours" : "Add a product"}
+          </DialogHeading>
         </div>
-      )}
-      <ErrorMessage message={error} />
-    </form>
+        {phase === "finding" ? (
+          <div className="flex items-center gap-4" role="status">
+            <span className="import-spinner shrink-0" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="font-medium">Finding your product…</p>
+              <p className="truncate text-sm text-muted">
+                {slow
+                  ? "This shop is taking a little longer"
+                  : new URL(sourceUrl).hostname.replace(/^www\./, "")}
+              </p>
+            </div>
+            <Dialog.Close
+              className="focus-ring ml-auto grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-muted"
+              aria-label="Cancel product lookup"
+            >
+              ×
+            </Dialog.Close>
+          </div>
+        ) : preview ? (
+          <section className="grid gap-4">
+            <div
+              className="import-hero"
+              data-revealed={revealed}
+              hidden={!uploadUrl && !imageUrl}
+            >
+              {(uploadUrl || imageUrl) && (
+                <img
+                  className="import-original"
+                  src={uploadUrl || imageUrl}
+                  alt={preview.name}
+                  referrerPolicy="no-referrer"
+                />
+              )}
+              {saved && (
+                <img
+                  className="import-cutout"
+                  src={`/images/${encodeURIComponent(saved.processedImageKey)}/720.webp`}
+                  alt=""
+                  onLoad={() => setRevealed(true)}
+                />
+              )}
+              {phase === "saving" && (
+                <span className="import-image-glow" aria-hidden="true" />
+              )}
+            </div>
+            {phase === "choosing" ? (
+              <>
+                <div className="text-center">
+                  <p className="text-xs tracking-wider text-muted uppercase">
+                    {preview.brand}
+                  </p>
+                  <p className="mt-1 font-medium">{preview.name}</p>
+                </div>
+                <ImagePicker
+                  imageUrls={preview.imageUrls}
+                  value={imageUrl}
+                  onChange={setImageUrl}
+                  file={imageFile}
+                  onFileChange={setImageFile}
+                  onError={setError}
+                />
+                {preview.warning && (
+                  <p className="text-sm text-muted" role="status">
+                    {preview.warning}
+                  </p>
+                )}
+                <button className={primaryButtonClass} type="submit">
+                  Save product
+                </button>
+              </>
+            ) : (
+              <div className="text-center" role="status" aria-live="polite">
+                <p className="flex items-center justify-center gap-2 font-medium">
+                  {saved ? (
+                    <>
+                      <span aria-hidden="true">✓</span> Added to your board
+                    </>
+                  ) : (
+                    <>
+                      <span
+                        className="import-spinner import-spinner-small"
+                        aria-hidden="true"
+                      />{" "}
+                      Preparing your image…
+                    </>
+                  )}
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  {saved
+                    ? saved.backgroundRemoved
+                      ? "All the focus on your find."
+                      : "Saved with your original image."
+                    : slow
+                      ? "Still working on your image. Hang tight."
+                      : "Getting your find ready for the board"}
+                </p>
+                {saved && (
+                  <button
+                    type="button"
+                    className="focus-ring mt-3 min-h-11 cursor-pointer rounded-full px-4 text-sm underline underline-offset-4"
+                    onClick={() => onAdded(saved)}
+                  >
+                    View on board
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+        ) : (
+          <div>
+            <p className="mb-6 text-muted">
+              Something worth keeping? Drop the link.
+            </p>
+            <label className="sr-only" htmlFor="product-url">
+              Product URL
+            </label>
+            <div className="flex gap-2">
+              <input
+                className={urlInputClass}
+                id="product-url"
+                name="url"
+                type="url"
+                inputMode="url"
+                autoComplete="url"
+                placeholder="Paste a product link"
+                autoFocus
+                required
+                value={sourceUrl}
+                onChange={(event) => setSourceUrl(event.target.value)}
+                onPaste={() =>
+                  setTimeout(() => formRef.current?.requestSubmit())
+                }
+              />
+              <button
+                className={`${primaryButtonClass} h-11 py-0`}
+                type="submit"
+              >
+                Find
+              </button>
+            </div>
+          </div>
+        )}
+        <ErrorMessage message={error} />
+      </form>
+    </Dialog.Popup>
   )
 }
 
@@ -210,11 +403,17 @@ function ImagePicker({
   }
 
   return (
-    <fieldset className="mt-4 min-w-0 border-0 p-0">
-      <legend className="mb-2 text-sm font-semibold">Choose an image</legend>
-      <ScrollArea.Root className="group/carousel relative">
+    <fieldset className="min-w-0 border-0 p-0">
+      <legend className="sr-only">Choose an image</legend>
+      <ScrollArea.Root
+        overflowEdgeThreshold={4}
+        className="group/carousel grid grid-cols-[1fr_auto_auto] items-center gap-x-1 gap-y-2"
+      >
+        <p className="text-sm font-semibold" aria-hidden="true">
+          Choose an image
+        </p>
         <button
-          className="carousel-control left-3 group-data-[overflow-x-start]/carousel:opacity-100 group-data-[overflow-x-start]/carousel:pointer-events-auto"
+          className="carousel-control col-start-2 row-start-1 group-data-[overflow-x-start]/carousel:visible"
           type="button"
           aria-label="Previous images"
           onClick={() => scroll(-1)}
@@ -222,10 +421,10 @@ function ImagePicker({
           <ChevronLeftIcon className="size-5 fill-current" />
         </button>
         <ScrollArea.Viewport
-          className="scrollbar-hidden snap-x snap-mandatory overscroll-x-contain p-0.5"
+          className="scrollbar-hidden col-span-3 row-start-2 min-w-0 snap-x snap-mandatory scroll-p-0.5 overscroll-x-contain p-0.5"
           ref={viewportRef}
         >
-          <ScrollArea.Content className="grid grid-flow-col auto-cols-[min(75vw,18rem)] gap-2">
+          <ScrollArea.Content className="grid grid-flow-col auto-cols-[4.5rem] justify-start gap-2">
             {imageUrls.map((url, index) => (
               <label
                 className="focus-ring relative m-0 aspect-[4/5] cursor-pointer snap-start overflow-hidden rounded-lg border-2 border-transparent bg-bg has-[input:checked]:border-text has-[input:focus-visible]:outline has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2"
@@ -246,7 +445,7 @@ function ImagePicker({
                   className="size-full object-contain"
                   src={url}
                   alt=""
-                  loading="lazy"
+                  loading="eager"
                   referrerPolicy="no-referrer"
                   onError={() => setBroken((prev) => new Set(prev).add(url))}
                 />
@@ -255,7 +454,7 @@ function ImagePicker({
           </ScrollArea.Content>
         </ScrollArea.Viewport>
         <button
-          className="carousel-control right-3 group-data-[overflow-x-end]/carousel:opacity-100 group-data-[overflow-x-end]/carousel:pointer-events-auto"
+          className="carousel-control col-start-3 row-start-1 group-data-[overflow-x-end]/carousel:visible"
           type="button"
           aria-label="Next images"
           onClick={() => scroll(1)}
@@ -302,7 +501,8 @@ function ImageUpload({
 
   function accept(candidate: File | undefined) {
     if (!candidate) return
-    if (!candidate.type.startsWith("image/")) return onError("Choose an image file.")
+    if (!candidate.type.startsWith("image/"))
+      return onError("Choose an image file.")
     if (candidate.size > maxUploadBytes) {
       return onError("That image is larger than 20 MB.")
     }
@@ -353,7 +553,11 @@ function ImageUpload({
         )}
         <span className="grid justify-items-center gap-1 text-sm font-normal text-muted">
           {!file && <UploadIcon className="mb-2 size-7 fill-current" />}
-          {!file && <span className="font-semibold text-text">Upload your own image</span>}
+          {!file && (
+            <span className="font-semibold text-text">
+              Upload your own image
+            </span>
+          )}
           <span>
             {file
               ? "Click or drop another image to replace it"

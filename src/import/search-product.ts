@@ -29,6 +29,13 @@ export class ProductSearchError extends Error {
   }
 }
 
+// Image search uses the current tool; the preview endpoint rejects this option.
+const imageSearch = {
+  type: "web_search",
+  search_content_types: ["text", "image"],
+  search_context_size: "medium",
+} as const
+
 export async function searchProduct(openai: OpenAI, sourceUrl: string) {
   const response = await openai.responses.parse({
     model: "gpt-5.6-luna",
@@ -39,13 +46,7 @@ export async function searchProduct(openai: OpenAI, sourceUrl: string) {
     max_tool_calls: 2,
     store: false,
     tool_choice: "required",
-    tools: [
-      {
-        type: "web_search_preview",
-        search_content_types: ["text", "image"],
-        search_context_size: "medium",
-      },
-    ],
+    tools: [imageSearch],
     text: {
       format: zodTextFormat(searchResultSchema, "product_search_result"),
     },

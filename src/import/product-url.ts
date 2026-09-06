@@ -84,6 +84,7 @@ export async function fetchPublicResource(
         "user-agent": browserUserAgent,
       },
       redirect: "manual",
+      signal: AbortSignal.timeout(15_000),
     })
 
     if (!redirectStatuses.has(response.status)) {
