@@ -100,9 +100,12 @@ one as follows:
 6. No Cloudflare Cache Rule is needed. The Worker uses Workers Cache, which
    ignores zone Cache Rules, and public HTML responses send `Vary: Cookie` so
    signed-in requests never match the cached anonymous page.
-7. Purge the old `/` page after the first release so it immediately changes from
-   the former catalog to the board list.
+7. Purge the cached `/` page when releasing a homepage redesign so visitors
+   immediately see the new page.
 
 The seeded board uses `/isaks-board`. Change its `name` or `slug` directly in D1
 if needed. Invited users without a board are prompted for a board name after
 sign-in. The application creates their board and derives its unique public slug.
+
+The homepage introduces Someday with a create-board action. Signed-in owners get a direct link to their own board. Other boards
+are accessible by their public links and are not listed on the homepage.

@@ -12,7 +12,7 @@ export function ProductGrid({ products, renderActions }: ProductGridProps) {
         className="flex min-h-80 flex-col items-center justify-center gap-2 px-4 py-12 text-center"
         aria-labelledby="empty-state-title"
       >
-        <h2 id="empty-state-title">No products yet</h2>
+        <h2 className="font-medium" id="empty-state-title">No products yet</h2>
         <p className="text-muted">
           Products will appear here after the first link is added.
         </p>
@@ -73,7 +73,7 @@ function ProductCard({
         <span className="text-[0.8125rem] tracking-[0.04em] uppercase text-muted">
           {product.brand}
         </span>
-        <h2 className="text-base font-[550] tracking-[-0.015em]">
+        <h2 className="text-base font-medium tracking-[-0.015em]">
           {product.name}
         </h2>
       </span>

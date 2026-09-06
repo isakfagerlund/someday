@@ -15,7 +15,7 @@ export function BoardLayout({ action, board, category, children }: BoardLayoutPr
   return (
     <main className="wrapper flex flex-col gap-8 py-[clamp(3rem,9vw,7rem)]">
       <div className="flex items-center justify-between gap-3">
-        <h1>
+        <h1 className="font-medium leading-[1.02] tracking-[-0.065em]">
           <a className="focus-ring no-underline" href="/">
             {board.name}
           </a>

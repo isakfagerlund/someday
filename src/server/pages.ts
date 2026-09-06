@@ -2,25 +2,21 @@ import { notFound } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
 import { env } from "cloudflare:workers"
 
-import { getBoardByOwnerId, getBoardBySlug, listBoards } from "../db/boards"
+import { getBoardByOwnerId, getBoardBySlug } from "../db/boards"
 import { listProducts } from "../db/products"
 import { isBoardSlug } from "../domain/board"
 import type { Category } from "../domain/product"
-import { getUserDisplayName, getViewerId } from "./viewer"
+import { getViewerId } from "./viewer"
 
 export const loadHome = createServerFn().handler(async () => {
   const userId = await getViewerId()
-  const boards = await listBoards(env.DB)
   const ownerBoard = userId
-    ? boards.find((board) => board.clerkOwnerId === userId)
+    ? await getBoardByOwnerId(env.DB, userId)
     : undefined
-  const userName = userId ? await getUserDisplayName(userId) : null
 
   return {
-    boards,
     clerkPublishableKey: env.CLERK_PUBLISHABLE_KEY,
     ownerBoard,
-    userName,
     signedIn: userId !== null,
   }
 })

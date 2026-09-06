@@ -1,4 +1,4 @@
-import { auth, clerkClient } from "@clerk/tanstack-react-start/server"
+import { auth } from "@clerk/tanstack-react-start/server"
 import { env } from "cloudflare:workers"
 
 import { getBoardByOwnerId } from "../db/boards"
@@ -19,19 +19,4 @@ export async function requireOwnedBoard() {
   if (!board) throw new Error("You do not own a board")
 
   return { board, userId }
-}
-
-export async function getUserDisplayName(userId: string) {
-  try {
-    const user = await clerkClient().users.getUser(userId)
-
-    return (
-      user.fullName ??
-      user.username ??
-      user.primaryEmailAddress?.emailAddress ??
-      "Signed in"
-    )
-  } catch {
-    return "Signed in"
-  }
 }

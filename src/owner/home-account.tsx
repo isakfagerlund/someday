@@ -1,9 +1,10 @@
-import { ClerkProvider, SignInButton, UserButton } from "@clerk/tanstack-react-start"
+import { ClerkProvider, SignInButton, SignUpButton, UserButton } from "@clerk/tanstack-react-start"
 import { Dialog } from "@base-ui/react/dialog"
 import { useState } from "react"
 
+import { LandingIntro } from "../components/landing-intro"
 import type { Board } from "../db/boards"
-import { reservedBoardSlugs, uniqueBoardSlug } from "../domain/board"
+import { boardSlugFromName } from "../domain/board"
 import { createBoard } from "../server/boards"
 import {
   backdropClass,
@@ -17,111 +18,104 @@ import {
 } from "./ui"
 
 interface HomeAccountProps {
-  boards: Board[]
   clerkPublishableKey: string
   ownerBoard?: Board
   signedIn: boolean
-  userName: string | null
 }
 
-// Sign-in, the owner's link to their board, and first-run board creation.
-// The home page already loaded Clerk for everyone before the migration.
 export default function HomeAccount({
-  boards,
   clerkPublishableKey,
   ownerBoard,
   signedIn,
-  userName,
 }: HomeAccountProps) {
+  const [creating, setCreating] = useState(signedIn && !ownerBoard)
+  const boardPath = ownerBoard ? `/${encodeURIComponent(ownerBoard.slug)}` : null
+  const actionClass = `${primaryButtonClass} inline-flex min-h-12 items-center gap-3 no-underline`
+
   return (
     <ClerkProvider publishableKey={clerkPublishableKey}>
-      {!signedIn ? (
-        <SignInButton mode="modal" forceRedirectUrl="/auth/redirect">
-          <button
-            className="pressable focus-ring cursor-pointer rounded-pill border-0 bg-text px-6 py-[0.65rem] text-bg hover:opacity-[0.82]"
-            type="button"
-          >
-            Sign in
-          </button>
-        </SignInButton>
-      ) : (
-        <div className="flex items-center gap-4">
-          {ownerBoard ? (
-            <a
-              className="focus-ring font-[550] no-underline"
-              href={`/${encodeURIComponent(ownerBoard.slug)}`}
-            >
-              {userName}
-            </a>
-          ) : (
-            <span className="font-[550]">{userName}</span>
-          )}
-          <UserButton />
-        </div>
-      )}
+      <LandingIntro
+        account={signedIn ? (
+          <nav className="flex items-center gap-5" aria-label="Your account">
+            {boardPath && <a className="focus-ring flex min-h-11 items-center text-sm font-medium no-underline" href={boardPath}>My board</a>}
+            <UserButton />
+          </nav>
+        ) : (
+          <SignInButton mode="modal" forceRedirectUrl="/auth/redirect">
+            <button className="pressable focus-ring min-h-11 cursor-pointer px-2 text-sm font-medium hover:opacity-70" type="button">Sign in</button>
+          </SignInButton>
+        )}
+        action={boardPath ? (
+          <a className={actionClass} href={boardPath}>Go to my board <span aria-hidden="true">↗</span></a>
+        ) : signedIn ? (
+          <button className={actionClass} type="button" onClick={() => setCreating(true)}>Create your board <span aria-hidden="true">↗</span></button>
+        ) : (
+          <SignUpButton mode="modal" forceRedirectUrl="/auth/redirect">
+            <button className={actionClass} type="button">Create your board <span aria-hidden="true">↗</span></button>
+          </SignUpButton>
+        )}
+      />
       {signedIn && !ownerBoard && (
-        <CreateBoardDialog takenSlugs={boards.map((board) => board.slug)} />
+        <CreateBoardDialog open={creating} onOpenChange={setCreating} />
       )}
     </ClerkProvider>
   )
 }
 
-function CreateBoardDialog({ takenSlugs }: { takenSlugs: string[] }) {
+function CreateBoardDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const slug = name.trim()
-    ? uniqueBoardSlug(name, [...reservedBoardSlugs, ...takenSlugs])
-    : ""
+  const [saving, setSaving] = useState(false)
+  const slug = boardSlugFromName(name)
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (saving) return
     setError(null)
+    setSaving(true)
 
     try {
       const board = await createBoard({ data: { name } })
-
       location.assign(`/${encodeURIComponent(board.slug)}`)
     } catch (caught) {
       setError(errorMessage(caught, "The board could not be created."))
+      setSaving(false)
     }
   }
 
   return (
-    <Dialog.Root open disablePointerDismissal>
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop className={backdropClass} />
         <Dialog.Popup className={`${popupClass} w-[min(100%-2rem,30rem)]`}>
-          <form className="flex flex-col gap-2 p-6" onSubmit={submit}>
-            <DialogHeading className="mb-4">Create your board</DialogHeading>
-            <p className="mb-2 text-muted">
-              Choose a name. We'll use it to make your board's URL.
-            </p>
-            <label className={labelClass} htmlFor="board-name">
-              Board name
-            </label>
+          <form className="flex flex-col gap-2 p-6" onSubmit={submit} aria-busy={saving}>
+            <DialogHeading className="mb-2" closeLabel="Close">Make a little room for someday.</DialogHeading>
+            <Dialog.Description className="mb-4 text-sm text-muted">
+              Give your board a name. Your first find comes next.
+            </Dialog.Description>
+            <label className={labelClass} htmlFor="board-name">Board name</label>
             <input
-              className={inputClass}
+              className={`${inputClass} rounded-lg`}
               id="board-name"
               name="name"
+              placeholder="My someday list"
               maxLength={80}
-              aria-describedby="board-url-preview"
+              aria-describedby="board-url-preview board-sharing"
               autoFocus
               required
+              disabled={saving}
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
-            <p className="text-sm text-muted" id="board-url-preview">
-              Your board will be at{" "}
-              <span className="text-text [overflow-wrap:anywhere]">
-                https://someday.fyi/<strong>{slug || "your-board"}</strong>
-              </span>
+            <p className="text-xs leading-relaxed text-muted" id="board-url-preview">
+              someday.fyi/<span className="text-text [overflow-wrap:anywhere]">{slug || "your-board"}</span>
+              {slug && " · We'll adjust the link if it's already taken."}
             </p>
+            <p className="mt-3 text-sm text-muted" id="board-sharing">Your board is public. Anyone with the link can see your finds.</p>
             <ErrorMessage message={error} />
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <button className={primaryButtonClass} type="submit">
-                Create board
-              </button>
-            </div>
+            <button className={`${primaryButtonClass} mt-5 min-h-12`} type="submit" disabled={saving || !slug}>
+              {saving ? "Creating your board…" : "Create board"}
+            </button>
           </form>
         </Dialog.Popup>
       </Dialog.Portal>
