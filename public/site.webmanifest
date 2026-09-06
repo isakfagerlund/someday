@@ -1,7 +1,7 @@
 {
   "name": "someday",
   "short_name": "someday",
-  "description": "A home for your wishlist.",
+  "description": "Everything you want, collected for you.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f2f2f2",

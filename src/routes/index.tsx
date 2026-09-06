@@ -13,10 +13,10 @@ export const Route = createFileRoute("/")({
     loaderData?.signedIn ? privateHtmlCacheHeaders : homeCacheHeaders,
   head: () => ({
     meta: [
-      { title: "someday · A home for your wishlist" },
+      { title: "someday" },
       {
         name: "description",
-        content: "Save the things you find online to your own little board. Paste a product link, choose an image, and come back to it someday.",
+        content: "Everything you want, collected for you.",
       },
     ],
   }),
