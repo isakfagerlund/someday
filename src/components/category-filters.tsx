@@ -35,6 +35,7 @@ export function CategoryFilters({
               to="/$boardSlug"
               params={{ boardSlug }}
               search={{ category: category ?? undefined }}
+              activeOptions={{ explicitUndefined: true }}
               resetScroll={false}
               preload={false}
               aria-current={
