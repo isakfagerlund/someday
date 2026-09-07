@@ -31,7 +31,7 @@ export default function OwnerBoard({
         (!category || product.category === category) &&
         !products.some((existing) => existing.id === product.id),
     ),
-    ...products,
+    ...products.filter((product) => !category || product.category === category),
   ]
 
   async function onAdded(product: CatalogProduct) {
@@ -44,9 +44,9 @@ export default function OwnerBoard({
         to: "/$boardSlug",
         params: { boardSlug: board.slug },
         search: { category: undefined },
+        resetScroll: false,
       })
     }
-    await router.invalidate()
     requestAnimationFrame(() =>
       document.getElementById(`product-${product.id}`)?.scrollIntoView({
         behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -64,6 +64,9 @@ export default function OwnerBoard({
         category={category}
         action={<AddProductButton onAdded={onAdded} />}
       >
+        <p className="sr-only" role="status">
+          {added[0] ? `${added[0].name} added to your board` : ""}
+        </p>
         <ProductGrid
           products={visibleProducts}
           addedProductId={added[0]?.id}

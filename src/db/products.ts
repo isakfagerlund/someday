@@ -2,7 +2,6 @@ import { and, desc, eq } from "drizzle-orm"
 
 import type {
   CatalogProduct,
-  Category,
   NewProduct,
   ProductUpdates,
 } from "../domain/product"
@@ -25,17 +24,11 @@ const catalogProductColumns = {
 export async function listProducts(
   database: D1Database,
   boardId: string,
-  category: Category | null,
 ): Promise<CatalogProduct[]> {
-  const filters = [
-    eq(products.boardId, boardId),
-    category ? eq(products.category, category) : undefined,
-  ]
-
   return createDb(database)
     .select(catalogProductColumns)
     .from(products)
-    .where(and(...filters))
+    .where(eq(products.boardId, boardId))
     .orderBy(desc(products.createdAt))
     .all()
 }

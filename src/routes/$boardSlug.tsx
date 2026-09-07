@@ -16,9 +16,11 @@ export const Route = createFileRoute("/$boardSlug")({
       ? (search.category as Category)
       : undefined,
   }),
-  loaderDeps: ({ search }) => ({ category: search.category ?? null }),
-  loader: ({ params, deps }) =>
-    loadBoard({ data: { slug: params.boardSlug, category: deps.category } }),
+  // Category changes reuse this list; returning to the board fetches it again.
+  staleTime: Infinity,
+  gcTime: 0,
+  loader: ({ params }) =>
+    loadBoard({ data: { slug: params.boardSlug } }),
   // Cache headers live on the route so the document response carries them.
   headers: ({ loaderData }) =>
     !loaderData
@@ -49,7 +51,7 @@ function BoardPage() {
   const { category = null } = Route.useSearch()
   const publicBoard = (
     <BoardLayout board={board} category={category}>
-      <ProductGrid products={products} />
+      <ProductGrid products={products.filter((product) => !category || product.category === category)} />
     </BoardLayout>
   )
 
@@ -58,6 +60,7 @@ function BoardPage() {
   return (
     <Suspense fallback={publicBoard}>
       <OwnerBoard
+        key={board.id}
         board={board}
         category={category}
         clerkPublishableKey={clerkPublishableKey}
