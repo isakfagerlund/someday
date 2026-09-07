@@ -56,7 +56,7 @@ export const products = sqliteTable(
   (table) => [
     check(
       "products_category_check",
-      sql`${table.category} in ('Clothing', 'Accessories', 'Tech', 'Other')`,
+      sql`${table.category} in ('Clothing', 'Accessories', 'Tech', 'Home', 'Other')`,
     ),
     index("products_catalog_index").on(table.boardId, table.createdAt),
     index("products_category_catalog_index").on(

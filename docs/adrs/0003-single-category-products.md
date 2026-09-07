@@ -10,7 +10,7 @@ The catalog needs simple filters and automatic classification. Multiple categori
 
 Every product belongs to exactly one category. GPT-5.6 Luna must choose from the category list supplied by the application and cannot create categories during import.
 
-The version-one category list is Clothing, Accessories, Tech, and Other. Products that do not fit the first three categories go into Other. The application will add categories only after real catalog usage shows a need.
+The category list is Clothing, Accessories, Tech, Home, and Other. Home covers furniture, lighting, decor, kitchenware, and household goods. Products that do not fit these categories go into Other. The application will add categories only after real catalog usage shows a need.
 
 ## Consequences
 
