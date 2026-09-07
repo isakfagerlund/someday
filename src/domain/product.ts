@@ -1,4 +1,4 @@
-export const categories = ["Clothing", "Accessories", "Tech", "Other"] as const
+export const categories = ["Clothing", "Accessories", "Tech", "Home", "Other"] as const
 
 export type Category = (typeof categories)[number]
 

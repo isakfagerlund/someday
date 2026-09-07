@@ -58,6 +58,7 @@ Choose exactly one category:
 - Clothing: garments and footwear
 - Accessories: bags, jewelry, watches, eyewear, and wearable accessories
 - Tech: electronics, computers, audio equipment, and electronic accessories
+- Home: furniture, lighting, decor, kitchenware, and household goods
 - Other: everything else`
 
 export async function extractProductCandidate(
