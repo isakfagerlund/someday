@@ -20,7 +20,7 @@ export function BoardLayout({ action, board, category, children }: BoardLayoutPr
           <a className="focus-ring translate-y-[0.06em] shrink-0 text-[0.82em] no-underline" href="/" aria-label="Someday home">
             <Logo />
           </a>
-          <span className="truncate">{board.name}</span>
+          <span className="truncate pr-[0.065em]">{board.name}</span>
         </h1>
         {action}
       </div>

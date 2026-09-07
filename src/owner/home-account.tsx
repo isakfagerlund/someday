@@ -113,14 +113,14 @@ function CreateBoardDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                   name="name"
                   placeholder="My someday list"
                   maxLength={80}
-                  aria-describedby="board-sharing"
+                  aria-describedby="board-url"
                   autoFocus
                   required
                   disabled={saving}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                 />
-                <p className="mt-2 text-sm text-muted" id="board-sharing">Anyone with the link can view your board.</p>
+                <p className="mt-2 text-sm break-all text-muted" id="board-url">someday.fyi/{slug || "your-board"}</p>
                 <ErrorMessage message={error} />
                 <button className={`${primaryButtonClass} mt-5 min-h-12`} type="submit" disabled={saving || !slug}>
                   Create board
