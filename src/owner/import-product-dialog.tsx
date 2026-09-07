@@ -1,6 +1,6 @@
 import { Dialog } from "@base-ui/react/dialog"
 import { ScrollArea } from "@base-ui/react/scroll-area"
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import {
   ChevronLeftIcon,
@@ -15,6 +15,7 @@ import {
   maxUploadBytes,
   previewProduct,
 } from "../server/products"
+import { MorphDialog } from "./morph-dialog"
 import {
   backdropClass,
   DialogHeading,
@@ -77,30 +78,11 @@ function ImportProductForm({
   const formRef = useRef<HTMLFormElement>(null)
   const requestPending = useRef(false)
   const [sourceUrl, setSourceUrl] = useState("")
-  const [saved, setSaved] = useState<CatalogProduct | null>(null)
-  const [revealed, setRevealed] = useState(false)
   const [slow, setSlow] = useState(false)
-  const [height, setHeight] = useState<number>()
   const [uploadUrl, setUploadUrl] = useState("")
-  const phase = saved
-    ? "saved"
-    : busy
-      ? preview
-        ? "saving"
-        : "finding"
-      : preview
-        ? "choosing"
-        : "url"
-
-  useLayoutEffect(() => {
-    const form = formRef.current
-    if (!form) return
-    const observer = new ResizeObserver(() =>
-      setHeight(form.getBoundingClientRect().height),
-    )
-    observer.observe(form)
-    return () => observer.disconnect()
-  }, [])
+  const phase = busy
+    ? preview ? "saving" : "finding"
+    : preview ? "choosing" : "url"
 
   useEffect(() => {
     if (!imageFile) return setUploadUrl("")
@@ -117,13 +99,6 @@ function ImportProductForm({
   }, [busy, preview])
 
   useEffect(() => {
-    if (!saved) return
-    // A failed image load must never trap a successfully saved product.
-    const timer = setTimeout(() => onAdded(saved), revealed ? 1300 : 5000)
-    return () => clearTimeout(timer)
-  }, [saved, revealed, onAdded])
-
-  useEffect(() => {
     if (phase === "choosing")
       formRef.current
         ?.querySelector<HTMLButtonElement>("button[type=submit]")
@@ -135,6 +110,7 @@ function ImportProductForm({
     requestPending.current = true
     setError(null)
     setBusy(true)
+    formRef.current?.querySelector("input")?.blur()
 
     try {
       const result = await previewProduct({ data: { url } })
@@ -152,7 +128,7 @@ function ImportProductForm({
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (requestPending.current || saved) return
+    if (requestPending.current) return
     if (!preview) return loadPreview(sourceUrl)
     requestPending.current = true
     onSaving(true)
@@ -184,7 +160,7 @@ function ImportProductForm({
       if (imageFile) data.append("imageFile", imageFile)
 
       const product = await createProduct({ data })
-      setSaved(product)
+      onAdded(product)
     } catch (caught) {
       setError(errorMessage(caught, "The product could not be added."))
       setBusy(false)
@@ -194,27 +170,22 @@ function ImportProductForm({
   }
 
   return (
-    <Dialog.Popup
-      className="import-dialog"
-      data-phase={phase}
-      style={{ height }}
-    >
+    <MorphDialog phase={phase}>
       <form
-        className="import-content"
         ref={formRef}
-        aria-busy={(busy && !saved) || undefined}
+        aria-busy={busy || undefined}
         onSubmit={submit}
       >
         <div
           className={
-            phase === "finding" || phase === "saving" || phase === "saved"
+            phase === "finding" || phase === "saving"
               ? "sr-only"
               : ""
           }
         >
           <DialogHeading
             className="mb-2"
-            closeLabel={busy || saved ? undefined : "Close add product dialog"}
+            closeLabel={busy ? undefined : "Close add product dialog"}
           >
             {preview ? "Make it yours" : "Add a product"}
           </DialogHeading>
@@ -241,23 +212,13 @@ function ImportProductForm({
           <section className="grid gap-4">
             <div
               className="import-hero"
-              data-revealed={revealed}
               hidden={!uploadUrl && !imageUrl}
             >
               {(uploadUrl || imageUrl) && (
                 <img
-                  className="import-original"
                   src={uploadUrl || imageUrl}
                   alt={preview.name}
                   referrerPolicy="no-referrer"
-                />
-              )}
-              {saved && (
-                <img
-                  className="import-cutout"
-                  src={`/images/${encodeURIComponent(saved.processedImageKey)}/720.webp`}
-                  alt=""
-                  onLoad={() => setRevealed(true)}
                 />
               )}
               {phase === "saving" && (
@@ -292,38 +253,10 @@ function ImportProductForm({
             ) : (
               <div className="text-center" role="status" aria-live="polite">
                 <p className="flex items-center justify-center gap-2 font-medium">
-                  {saved ? (
-                    <>
-                      <span aria-hidden="true">✓</span> Added to your board
-                    </>
-                  ) : (
-                    <>
-                      <span
-                        className="import-spinner import-spinner-small"
-                        aria-hidden="true"
-                      />{" "}
-                      Preparing your image…
-                    </>
-                  )}
+                  <span className="import-spinner import-spinner-small" aria-hidden="true" />
+                  Preparing your image…
                 </p>
-                <p className="mt-1 text-sm text-muted">
-                  {saved
-                    ? saved.backgroundRemoved
-                      ? "All the focus on your find."
-                      : "Saved with your original image."
-                    : slow
-                      ? "Still working on your image. Hang tight."
-                      : "Getting your find ready for the board"}
-                </p>
-                {saved && (
-                  <button
-                    type="button"
-                    className="focus-ring mt-3 min-h-11 cursor-pointer rounded-full px-4 text-sm underline underline-offset-4"
-                    onClick={() => onAdded(saved)}
-                  >
-                    View on board
-                  </button>
-                )}
+                {slow && <p className="mt-1 text-sm text-muted">Still working on your image…</p>}
               </div>
             )}
           </section>
@@ -363,7 +296,7 @@ function ImportProductForm({
         )}
         <ErrorMessage message={error} />
       </form>
-    </Dialog.Popup>
+    </MorphDialog>
   )
 }
 

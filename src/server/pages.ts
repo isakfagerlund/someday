@@ -5,7 +5,6 @@ import { env } from "cloudflare:workers"
 import { getBoardByOwnerId, getBoardBySlug } from "../db/boards"
 import { listProducts } from "../db/products"
 import { isBoardSlug } from "../domain/board"
-import type { Category } from "../domain/product"
 import { getViewerId } from "./viewer"
 
 export const loadHome = createServerFn().handler(async () => {
@@ -22,8 +21,8 @@ export const loadHome = createServerFn().handler(async () => {
 })
 
 export const loadBoard = createServerFn()
-  .validator((input: { slug: string; category: Category | null }) => input)
-  .handler(async ({ data: { slug, category } }) => {
+  .validator((input: { slug: string }) => input)
+  .handler(async ({ data: { slug } }) => {
     const board = isBoardSlug(slug)
       ? await getBoardBySlug(env.DB, slug)
       : undefined
@@ -31,7 +30,7 @@ export const loadBoard = createServerFn()
     if (!board) throw notFound()
 
     const userId = await getViewerId()
-    const products = await listProducts(env.DB, board.id, category)
+    const products = await listProducts(env.DB, board.id)
 
     return {
       board,

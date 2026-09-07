@@ -7,6 +7,7 @@ import { LandingIntro } from "../components/landing-intro"
 import type { Board } from "../db/boards"
 import { boardSlugFromName } from "../domain/board"
 import { createBoard } from "../server/boards"
+import { MorphDialog } from "./morph-dialog"
 import {
   backdropClass,
   DialogHeading,
@@ -14,7 +15,6 @@ import {
   errorMessage,
   inputClass,
   labelClass,
-  popupClass,
   primaryButtonClass,
 } from "./ui"
 
@@ -91,40 +91,44 @@ function CreateBoardDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root open={open} onOpenChange={(next) => { if (!saving) onOpenChange(next) }}>
       <Dialog.Portal>
         <Dialog.Backdrop className={backdropClass} />
-        <Dialog.Popup className={`${popupClass} w-[min(100%-2rem,30rem)]`}>
-          <form className="flex flex-col gap-2 p-6" onSubmit={submit} aria-busy={saving}>
-            <DialogHeading className="mb-2" closeLabel="Close">Make a little room for someday.</DialogHeading>
-            <Dialog.Description className="mb-4 text-sm text-muted">
-              Give your board a name. Your first find comes next.
-            </Dialog.Description>
-            <label className={labelClass} htmlFor="board-name">Board name</label>
-            <input
-              className={`${inputClass} rounded-lg`}
-              id="board-name"
-              name="name"
-              placeholder="My someday list"
-              maxLength={80}
-              aria-describedby="board-url-preview board-sharing"
-              autoFocus
-              required
-              disabled={saving}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-            <p className="text-xs leading-relaxed text-muted" id="board-url-preview">
-              someday.fyi/<span className="text-text [overflow-wrap:anywhere]">{slug || "your-board"}</span>
-              {slug && " · We'll adjust the link if it's already taken."}
-            </p>
-            <p className="mt-3 text-sm text-muted" id="board-sharing">Your board is public. Anyone with the link can see your finds.</p>
-            <ErrorMessage message={error} />
-            <button className={`${primaryButtonClass} mt-5 min-h-12`} type="submit" disabled={saving || !slug}>
-              {saving ? "Creating your board…" : "Create board"}
-            </button>
+        <MorphDialog phase={saving ? "finding" : "url"}>
+          <form className="flex flex-col gap-2" onSubmit={submit} aria-busy={saving}>
+            <div className={saving ? "sr-only" : ""}>
+              <DialogHeading className="mb-2" closeLabel={saving ? undefined : "Close"}>Create board</DialogHeading>
+            </div>
+            {saving ? (
+              <div className="flex items-center gap-4" role="status">
+                <span className="import-spinner shrink-0" aria-hidden="true" />
+                <p className="font-medium">Creating your board…</p>
+              </div>
+            ) : (
+              <>
+                <label className={labelClass} htmlFor="board-name">Board name</label>
+                <input
+                  className={`${inputClass} rounded-lg`}
+                  id="board-name"
+                  name="name"
+                  placeholder="My someday list"
+                  maxLength={80}
+                  aria-describedby="board-sharing"
+                  autoFocus
+                  required
+                  disabled={saving}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+                <p className="mt-2 text-sm text-muted" id="board-sharing">Anyone with the link can view your board.</p>
+                <ErrorMessage message={error} />
+                <button className={`${primaryButtonClass} mt-5 min-h-12`} type="submit" disabled={saving || !slug}>
+                  Create board
+                </button>
+              </>
+            )}
           </form>
-        </Dialog.Popup>
+        </MorphDialog>
       </Dialog.Portal>
     </Dialog.Root>
   )
