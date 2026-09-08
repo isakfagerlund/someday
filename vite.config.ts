@@ -12,7 +12,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     sentryTanstackStart({
-      org: process.env.SENTRY_ORG,
+      org: "irewardhealth",
       project: "someday",
       authToken: process.env.SENTRY_AUTH_TOKEN,
       autoInstrumentMiddleware: false,

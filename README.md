@@ -80,14 +80,12 @@ Later Wrangler deployments preserve the existing Worker secrets.
 ## Error monitoring
 
 Sentry reports browser errors, router error-boundary failures, server request and
-function errors, and server `console.error` calls to your `someday` Sentry project.
+function errors, and server `console.error` calls to `irewardhealth/someday`.
 The server uses `@sentry/cloudflare` because it runs on Workers.
 
-Set the GitHub Actions secret `SENTRY_AUTH_TOKEN` and repository variable
-`SENTRY_ORG` to your Sentry organization slug to enable source-map uploads.
+Set the GitHub Actions secret `SENTRY_AUTH_TOKEN` to enable source-map uploads.
 Error reporting works without it, but stack traces may show bundled code.
-For local uploads, export `SENTRY_AUTH_TOKEN` and `SENTRY_ORG` before running
-`pnpm run build`.
+For local uploads, export the token before running `pnpm run build`.
 
 Run `pnpm run dev` and click **Test Sentry** at the bottom of the page. Look for
 `Sentry Test Error` in the project's Sentry Issues feed under `development`.
