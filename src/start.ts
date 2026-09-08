@@ -1,4 +1,8 @@
 import { clerkMiddleware } from "@clerk/tanstack-react-start/server"
+import {
+  sentryGlobalFunctionMiddleware,
+  sentryGlobalRequestMiddleware,
+} from "@sentry/tanstackstart-react"
 import { createStart } from "@tanstack/react-start"
 
 // Clerk reads CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY from process.env,
@@ -6,9 +10,11 @@ import { createStart } from "@tanstack/react-start"
 // lets it verify sessions without a network round trip.
 export const startInstance = createStart(() => ({
   requestMiddleware: [
+    sentryGlobalRequestMiddleware,
     clerkMiddleware(({ url }) => ({
       authorizedParties: [url.origin],
       jwtKey: process.env.CLERK_JWT_KEY,
     })),
   ],
+  functionMiddleware: [sentryGlobalFunctionMiddleware],
 }))

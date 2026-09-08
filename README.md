@@ -35,6 +35,7 @@ The GitHub repository needs these Actions secrets:
 
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN`
+- `SENTRY_AUTH_TOKEN` for uploading source maps to Sentry during builds
 
 Every same-repository pull request is uploaded as a preview version of the
 `someday` Worker. It reuses the secrets already attached to that Worker, so no
@@ -75,6 +76,20 @@ npx wrangler deploy --secrets-file .env.production
 ```
 
 Later Wrangler deployments preserve the existing Worker secrets.
+
+## Error monitoring
+
+Sentry reports browser errors, router error-boundary failures, server request and
+function errors, and server `console.error` calls to `irewardhealth/someday`.
+The server uses `@sentry/cloudflare` because it runs on Workers.
+
+Set the GitHub Actions secret `SENTRY_AUTH_TOKEN` to enable source-map uploads.
+Error reporting works without it, but stack traces may show bundled code.
+For local uploads, export the token before running `pnpm run build`.
+
+Run `pnpm run dev` and click **Test Sentry** at the bottom of the page. Look for
+`Sentry Test Error` in the project's Sentry Issues feed under `development`.
+The button is omitted from production builds.
 
 ## Clerk setup
 

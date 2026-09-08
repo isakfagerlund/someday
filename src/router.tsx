@@ -1,9 +1,16 @@
+import { captureException } from "@sentry/tanstackstart-react"
 import { createRouter } from "@tanstack/react-router"
 
 import { routeTree } from "./routeTree.gen"
 
 export function getRouter() {
-  return createRouter({ routeTree, defaultPreload: false })
+  return createRouter({
+    routeTree,
+    defaultPreload: false,
+    defaultOnCatch: (error) => {
+      captureException(error)
+    },
+  })
 }
 
 declare module "@tanstack/react-router" {
