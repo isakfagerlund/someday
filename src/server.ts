@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/cloudflare"
 import {
   createStartHandler,
   defaultStreamHandler,
@@ -10,7 +11,7 @@ const start = createStartHandler(defaultStreamHandler)
 
 // Images and health bypass the framework so they keep their own headers
 // and never pay for a React render.
-export default {
+const handler = {
   async fetch(request, env, ctx): Promise<Response> {
     const { pathname } = new URL(request.url)
 
@@ -33,6 +34,16 @@ export default {
     return response.status === 404 ? withNotFoundCache(request, response) : response
   },
 } satisfies ExportedHandler<Env>
+
+export default Sentry.withSentry(
+  () => ({
+    dsn: "https://2a36ca698eaee124eb58ec3ab5dfa7c4@o180940.ingest.us.sentry.io/4512047167045632",
+    environment: import.meta.env.MODE,
+    // TanStack logs SSR rendering errors instead of throwing them to middleware.
+    integrations: [Sentry.captureConsoleIntegration({ levels: ["error"] })],
+  }),
+  handler,
+)
 
 // Unknown slugs are cached like the home page so bots probing random paths
 // do not run the Worker every time. Requests with cookies stay private.
