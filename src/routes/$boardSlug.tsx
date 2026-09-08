@@ -46,7 +46,7 @@ export const Route = createFileRoute("/$boardSlug")({
 })
 
 function BoardPage() {
-  const { board, canManage, clerkPublishableKey, products } =
+  const { board, canManage, clerkPublishableKey, products, hasMultipleBoards } =
     Route.useLoaderData()
   const { category = null } = Route.useSearch()
   const publicBoard = (
@@ -65,6 +65,7 @@ function BoardPage() {
         category={category}
         clerkPublishableKey={clerkPublishableKey}
         products={products}
+        hasMultipleBoards={hasMultipleBoards}
       />
     </Suspense>
   )

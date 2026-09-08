@@ -13,15 +13,19 @@ import { categories, type SubjectPosition } from "../domain/product"
 
 const now = sql`(unixepoch() * 1000)`
 
-export const boards = sqliteTable("boards", {
-  id: text("id").notNull().primaryKey(),
-  name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
-  clerkOwnerId: text("clerk_owner_id").notNull().unique(),
-  createdAt: integer("created_at", { mode: "timestamp_ms" })
-    .notNull()
-    .default(now),
-})
+export const boards = sqliteTable(
+  "boards",
+  {
+    id: text("id").notNull().primaryKey(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    clerkOwnerId: text("clerk_owner_id").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(now),
+  },
+  (table) => [index("boards_owner_index").on(table.clerkOwnerId, table.createdAt)],
+)
 
 export const products = sqliteTable(
   "products",

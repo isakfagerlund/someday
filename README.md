@@ -122,5 +122,12 @@ The seeded board uses `/isaks-board`. Change its `name` or `slug` directly in D1
 if needed. Invited users without a board are prompted for a board name after
 sign-in. The application creates their board and derives its unique public slug.
 
-The homepage introduces Someday with a create-board action. Signed-in owners get a direct link to their own board. Other boards
-are accessible by their public links and are not listed on the homepage.
+The homepage introduces Someday with a create-board action. Owners with one board
+get a direct link to it and a secondary action to create another. Owners with
+multiple boards see their boards in creation order, with a product thumbnail and
+item count. Signing in opens the only board, or the homepage when there are several.
+Each board remains public by its URL; the homepage only lists the signed-in user's boards.
+
+Apply the `multiple_boards` migration before using the new create-board flow.
+It replaces the unique owner index with a regular index and preserves existing
+boards and products. Product imports explicitly target the board being viewed.

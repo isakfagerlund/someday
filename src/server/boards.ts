@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers"
 import { z } from "zod"
 
 import { purgeHomeCache } from "../catalog-cache"
-import { getBoardByOwnerId, insertBoard, listBoards } from "../db/boards"
+import { insertBoard, listBoards } from "../db/boards"
 import { boardSlugFromName, uniqueBoardSlug } from "../domain/board"
 import { getViewerId } from "./viewer"
 
@@ -16,9 +16,6 @@ export const createBoard = createServerFn({ method: "POST" })
 
     if (!userId) throw new Error("Your session expired. Refresh and sign in again.")
 
-    const ownedBoard = await getBoardByOwnerId(env.DB, userId)
-
-    if (ownedBoard) return { slug: ownedBoard.slug }
     if (!boardSlugFromName(data.name)) {
       throw new Error("Enter a name with at least one letter or number.")
     }
