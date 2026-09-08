@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/cloudflare"
+import { isNotFound } from "@tanstack/react-router"
 import {
   createStartHandler,
   defaultStreamHandler,
@@ -41,6 +42,9 @@ export default Sentry.withSentry(
     environment: import.meta.env.MODE,
     // TanStack logs SSR rendering errors instead of throwing them to middleware.
     integrations: [Sentry.captureConsoleIntegration({ levels: ["error"] })],
+    // TanStack throws not-found objects as control flow before returning a 404.
+    beforeSend: (event, hint) =>
+      isNotFound(hint.originalException) ? null : event,
   }),
   handler,
 )
