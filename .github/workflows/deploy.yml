@@ -31,6 +31,7 @@ jobs:
         env:
           OPENAI_API_KEY: test
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
 
       - run: pnpm exec wrangler deploy --dry-run
         env:
