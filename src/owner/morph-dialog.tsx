@@ -2,7 +2,11 @@ import { Dialog } from "@base-ui/react/dialog"
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react"
 
 // Both flows share their shape transition and follow Safari's visible viewport.
-export function MorphDialog({ children, phase }: { children: ReactNode; phase: string }) {
+export function MorphDialog({ children, phase, finalFocus }: {
+  children: ReactNode
+  phase: string
+  finalFocus?: Dialog.Popup.Props["finalFocus"]
+}) {
   const contentRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState<number>()
   const [viewport, setViewport] = useState<{ top: number; height: number }>()
@@ -29,6 +33,7 @@ export function MorphDialog({ children, phase }: { children: ReactNode; phase: s
   return (
     <Dialog.Popup
       className="import-dialog"
+      finalFocus={finalFocus}
       data-phase={phase}
       style={{ height, top: viewport ? viewport.top + viewport.height / 2 : undefined, maxHeight: viewport ? Math.max(0, viewport.height - 32) : undefined }}
     >

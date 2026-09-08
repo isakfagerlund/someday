@@ -10,11 +10,13 @@ interface BoardLayoutProps {
   board: Board
   category: Category | null
   children: ReactNode
+  navigation?: ReactNode
 }
 
-export function BoardLayout({ action, board, category, children }: BoardLayoutProps) {
+export function BoardLayout({ action, board, category, children, navigation }: BoardLayoutProps) {
   return (
     <main className="wrapper flex flex-col gap-8 py-[clamp(3rem,9vw,7rem)]">
+      {navigation}
       <div className="flex items-center justify-between gap-3">
         <h1 className="flex min-w-0 items-center gap-3 font-medium leading-[1.02] tracking-[-0.065em]">
           <a className="focus-ring translate-y-[0.06em] shrink-0 text-[0.82em] no-underline" href="/" aria-label="Someday home">

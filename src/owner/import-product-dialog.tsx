@@ -28,8 +28,10 @@ const urlInputClass =
   "focus-ring h-11 min-w-0 flex-1 rounded-pill border border-border bg-surface px-4 text-text"
 
 export function AddProductButton({
+  boardId,
   onAdded,
 }: {
+  boardId: string
   onAdded: (product: CatalogProduct) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -51,6 +53,7 @@ export function AddProductButton({
       <Dialog.Portal>
         <Dialog.Backdrop className={backdropClass} />
         <ImportProductForm
+          boardId={boardId}
           onSaving={setSaving}
           onAdded={(product) => {
             onAdded(product)
@@ -64,9 +67,11 @@ export function AddProductButton({
 }
 
 function ImportProductForm({
+  boardId,
   onSaving,
   onAdded,
 }: {
+  boardId: string
   onSaving: (saving: boolean) => void
   onAdded: (product: CatalogProduct) => void
 }) {
@@ -113,7 +118,7 @@ function ImportProductForm({
     formRef.current?.querySelector("input")?.blur()
 
     try {
-      const result = await previewProduct({ data: { url } })
+      const result = await previewProduct({ data: { url, boardId } })
 
       setPreview(result)
       setImageUrl(result.recommendedImageUrl)
@@ -146,6 +151,7 @@ function ImportProductForm({
 
       const data = new FormData()
       const fields = {
+        boardId,
         sourceUrl: preview.sourceUrl,
         canonicalUrl: preview.canonicalUrl,
         name: preview.name,

@@ -2,20 +2,20 @@ import { notFound } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
 import { env } from "cloudflare:workers"
 
-import { getBoardByOwnerId, getBoardBySlug } from "../db/boards"
+import { listBoardsByOwnerId, getBoardBySlug } from "../db/boards"
 import { listProducts } from "../db/products"
 import { isBoardSlug } from "../domain/board"
 import { getViewerId } from "./viewer"
 
 export const loadHome = createServerFn().handler(async () => {
   const userId = await getViewerId()
-  const ownerBoard = userId
-    ? await getBoardByOwnerId(env.DB, userId)
-    : undefined
+  const ownerBoards = userId
+    ? await listBoardsByOwnerId(env.DB, userId)
+    : []
 
   return {
     clerkPublishableKey: env.CLERK_PUBLISHABLE_KEY,
-    ownerBoard,
+    ownerBoards,
     signedIn: userId !== null,
   }
 })
@@ -30,11 +30,16 @@ export const loadBoard = createServerFn()
     if (!board) throw notFound()
 
     const userId = await getViewerId()
-    const products = await listProducts(env.DB, board.id)
+    const canManage = board.clerkOwnerId === userId
+    const [products, ownerBoards] = await Promise.all([
+      listProducts(env.DB, board.id),
+      canManage && userId ? listBoardsByOwnerId(env.DB, userId) : Promise.resolve([]),
+    ])
 
     return {
       board,
-      canManage: board.clerkOwnerId === userId,
+      canManage,
+      hasMultipleBoards: ownerBoards.length > 1,
       clerkPublishableKey: env.CLERK_PUBLISHABLE_KEY,
       products,
       signedIn: userId !== null,
@@ -43,7 +48,7 @@ export const loadBoard = createServerFn()
 
 export const loadOwnerBoardPath = createServerFn().handler(async () => {
   const userId = await getViewerId()
-  const board = userId ? await getBoardByOwnerId(env.DB, userId) : undefined
+  const boards = userId ? await listBoardsByOwnerId(env.DB, userId) : []
 
-  return board ? `/${encodeURIComponent(board.slug)}` : "/"
+  return boards.length === 1 ? `/${encodeURIComponent(boards[0].slug)}` : "/"
 })

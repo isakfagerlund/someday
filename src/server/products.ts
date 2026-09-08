@@ -18,6 +18,7 @@ const productIdInput = z.object({ id: z.uuid() })
 export const maxUploadBytes = 20_000_000
 
 const createProductFields = z.object({
+  boardId: z.string().min(1),
   sourceUrl: z.string().trim().min(1),
   canonicalUrl: z.string().trim().min(1),
   name: z.string().trim().min(1).max(300),
@@ -44,9 +45,9 @@ function parseCreateProductInput(form: FormData) {
 }
 
 export const previewProduct = createServerFn({ method: "POST" })
-  .validator(z.object({ url: z.string().trim().min(1) }))
+  .validator(z.object({ url: z.string().trim().min(1), boardId: z.string().min(1) }))
   .handler(async ({ data }) => {
-    await requireOwnedBoard()
+    await requireOwnedBoard(data.boardId)
 
     return importPreview(data.url, env)
   })
@@ -54,7 +55,7 @@ export const previewProduct = createServerFn({ method: "POST" })
 export const createProduct = createServerFn({ method: "POST" })
   .validator((form: FormData) => parseCreateProductInput(form))
   .handler(async ({ data, context }) => {
-    const { board } = await requireOwnedBoard()
+    const { board } = await requireOwnedBoard(data.boardId)
     const product = await importProduct(data, board.id, env)
 
     await purgeBoardCache(context.ctx, board.id)

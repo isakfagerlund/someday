@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 
 import { createDb } from "./index"
 import { boards, products } from "./schema"
@@ -31,12 +31,32 @@ export function getBoardBySlug(database: D1Database, slug: string) {
     .get()
 }
 
-export function getBoardByOwnerId(database: D1Database, ownerId: string) {
+export function getBoardById(database: D1Database, id: string) {
   return createDb(database)
     .select(boardColumns)
     .from(boards)
-    .where(eq(boards.clerkOwnerId, ownerId))
+    .where(eq(boards.id, id))
     .get()
+}
+
+export type BoardSummary = Awaited<ReturnType<typeof listBoardsByOwnerId>>[number]
+
+export function listBoardsByOwnerId(database: D1Database, ownerId: string) {
+  return createDb(database)
+    .select({
+      ...boardColumns,
+      productCount: sql<number>`(
+        select count(*) from products where products.board_id = boards.id
+      )`.mapWith(Number),
+      imageKey: sql<string | null>`(
+        select image_key from products where products.board_id = boards.id
+        order by created_at desc, id limit 1
+      )`,
+    })
+    .from(boards)
+    .where(eq(boards.clerkOwnerId, ownerId))
+    .orderBy(boards.createdAt, boards.id)
+    .all()
 }
 
 export async function insertBoard(

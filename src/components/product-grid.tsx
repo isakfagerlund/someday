@@ -4,12 +4,16 @@ interface ProductGridProps {
   addedProductId?: string
   products: CatalogProduct[]
   renderActions?: (product: CatalogProduct) => React.ReactNode
+  emptyTitle?: string
+  emptyDescription?: string
 }
 
 export function ProductGrid({
   products,
   renderActions,
   addedProductId,
+  emptyTitle = "No products yet",
+  emptyDescription = "Products will appear here after the first link is added.",
 }: ProductGridProps) {
   if (products.length === 0) {
     return (
@@ -18,10 +22,10 @@ export function ProductGrid({
         aria-labelledby="empty-state-title"
       >
         <h2 className="font-medium" id="empty-state-title">
-          No products yet
+          {emptyTitle}
         </h2>
         <p className="text-muted">
-          Products will appear here after the first link is added.
+          {emptyDescription}
         </p>
       </section>
     )

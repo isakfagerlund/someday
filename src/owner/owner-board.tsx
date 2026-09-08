@@ -14,6 +14,7 @@ interface OwnerBoardProps {
   category: Category | null
   clerkPublishableKey: string
   products: CatalogProduct[]
+  hasMultipleBoards: boolean
 }
 
 // The owner's version of the board: same public markup plus the controls.
@@ -22,6 +23,7 @@ export default function OwnerBoard({
   category,
   clerkPublishableKey,
   products,
+  hasMultipleBoards,
 }: OwnerBoardProps) {
   const router = useRouter()
   const [added, setAdded] = useState<CatalogProduct[]>([])
@@ -62,13 +64,18 @@ export default function OwnerBoard({
       <BoardLayout
         board={board}
         category={category}
-        action={<AddProductButton onAdded={onAdded} />}
+        action={<AddProductButton boardId={board.id} onAdded={onAdded} />}
+        navigation={hasMultipleBoards ? (
+          <a className="focus-ring -my-2 inline-flex min-h-11 w-fit items-center text-sm text-muted no-underline hover:text-text" href="/#boards-heading">Your boards</a>
+        ) : undefined}
       >
         <p className="sr-only" role="status">
           {added[0] ? `${added[0].name} added to your board` : ""}
         </p>
         <ProductGrid
           products={visibleProducts}
+          emptyTitle={products.length === 0 ? "Add your first find" : undefined}
+          emptyDescription={products.length === 0 ? "Paste a product link to start your board." : undefined}
           addedProductId={added[0]?.id}
           renderActions={(product) => <EditProductButton product={product} />}
         />

@@ -24,7 +24,7 @@ export function LandingIntro({
         <p className="mt-6 max-w-96 text-base leading-relaxed text-muted md:text-lg">
           Everything you want, collected for you.
         </p>
-        <div className="mt-8">{action}</div>
+        {action && <div className="mt-8">{action}</div>}
       </section>
     </>
   )
