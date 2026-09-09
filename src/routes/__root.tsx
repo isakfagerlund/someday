@@ -50,16 +50,6 @@ function RootLayout() {
       </head>
       <body>
         <Outlet />
-        {import.meta.env.DEV && (
-          <button
-            type="button"
-            onClick={() => {
-              throw new Error("Sentry Test Error")
-            }}
-          >
-            Test Sentry
-          </button>
-        )}
         <Scripts />
       </body>
     </html>

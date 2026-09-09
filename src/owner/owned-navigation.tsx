@@ -12,7 +12,7 @@ export function OwnedNavigation({ boardSlug, category, view }: {
   return (
     <Link
       id="owned-navigation"
-      className={`focus-ring min-h-11 shrink-0 items-center rounded-sm text-sm whitespace-nowrap text-muted no-underline hover:text-text ${owned ? "inline-flex" : "hidden md:inline-flex"}`}
+      className="focus-ring inline-flex min-h-11 shrink-0 items-center rounded-sm text-sm whitespace-nowrap text-muted no-underline hover:text-text"
       to="/$boardSlug"
       params={{ boardSlug }}
       search={{ category: category ?? undefined, view: owned ? undefined : "owned" }}

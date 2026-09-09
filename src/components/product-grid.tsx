@@ -18,7 +18,29 @@ export function ProductGrid({
   ownedVisible = false,
 }: ProductGridProps) {
   const gridRef = useRef<HTMLUListElement>(null)
+  const previousPositions = useRef(new Map<string, { left: number; top: number }>())
+  const productOrder = products.map((product) => product.id).join(",")
   const previousOwnedVisible = useRef(ownedVisible)
+
+  useLayoutEffect(() => {
+    const cards = gridRef.current?.querySelectorAll<HTMLElement>(":scope > li") ?? []
+    const positions = new Map<string, { left: number; top: number }>()
+    const animations: Animation[] = []
+    for (const card of cards) {
+      const bounds = { left: card.offsetLeft, top: card.offsetTop }
+      positions.set(card.id, bounds)
+      const previous = previousPositions.current.get(card.id)
+      if (!previous || matchMedia("(prefers-reduced-motion: reduce)").matches) continue
+      const x = previous.left - bounds.left
+      const y = previous.top - bounds.top
+      if (x || y) animations.push(card.animate([
+        { transform: `translate(${x}px, ${y}px)` },
+        { transform: "translate(0, 0)" },
+      ], { duration: 420, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }))
+    }
+    previousPositions.current = positions
+    return () => animations.forEach((animation) => animation.cancel())
+  }, [productOrder])
 
   useLayoutEffect(() => {
     const revealing = ownedVisible && !previousOwnedVisible.current
@@ -50,7 +72,7 @@ export function ProductGrid({
           id={`product-${product.id}`}
           data-owned={product.status === "owned" ? "" : undefined}
           className={
-            product.id === addedProductId ? "product-arrival" : undefined
+            product.id === addedProductId ? "relative product-arrival" : "relative"
           }
         >
           <article className="group relative">
@@ -81,6 +103,7 @@ function ProductCard({
       href={product.sourceUrl}
     >
       <span
+        data-product-image
         className={`relative isolate block aspect-[4/5] overflow-hidden rounded-lg bg-surface after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:border after:border-[oklch(0_0_0/0.1)] after:content-[''] dark:after:border-[oklch(1_0_0/0.1)] ${owned ? "owned-image" : ""}`}
         onPointerMove={owned ? followShine : undefined}
         onPointerLeave={owned ? resetShine : undefined}

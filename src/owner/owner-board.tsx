@@ -1,9 +1,8 @@
 import { ClerkProvider } from "@clerk/tanstack-react-start"
-import { Link, useRouter } from "@tanstack/react-router"
-import { useRef, useState } from "react"
+import { useRouter } from "@tanstack/react-router"
+import { useEffect, useRef, useState } from "react"
 
 import { BoardLayout } from "../components/board-layout"
-import { CloseIcon } from "../components/icons"
 import { ProductEmptyState } from "../components/product-empty-state"
 import { ProductGrid } from "../components/product-grid"
 import type { Board } from "../db/boards"
@@ -19,6 +18,7 @@ import { OwnedNavigation } from "./owned-navigation"
 import { AddProductButton } from "./import-product-dialog"
 import { ProductActions } from "./product-actions"
 import { errorMessage } from "./ui"
+import { animatePurchase } from "./animate-purchase"
 
 interface OwnerBoardProps {
   board: Board
@@ -29,14 +29,6 @@ interface OwnerBoardProps {
   hasMultipleBoards: boolean
 }
 
-interface StatusFeedback {
-  message: string
-  product: CatalogProduct
-  target: ProductStatus
-  failed: boolean
-}
-
-// Loader data is the single product list. Every mutation refreshes it.
 export default function OwnerBoard({
   board, category, view, clerkPublishableKey, products, hasMultipleBoards,
 }: OwnerBoardProps) {
@@ -44,9 +36,21 @@ export default function OwnerBoard({
   const [addedId, setAddedId] = useState<string>()
   const [pending, setPending] = useState(false)
   const requestPending = useRef(false)
-  const [feedback, setFeedback] = useState<StatusFeedback | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [announcement, setAnnouncement] = useState("")
+  const [savedStatuses, setSavedStatuses] = useState<Record<string, ProductStatus>>({})
+  useEffect(() => {
+    setSavedStatuses((statuses) => Object.fromEntries(
+      Object.entries(statuses).filter(([id, status]) =>
+        products.some((product) => product.id === id && product.status !== status),
+      ),
+    ))
+  }, [products])
+
   const revealedProduct = products.find((product) => product.id === addedId)
-  const visibleProducts = products.filter((product) =>
+  const visibleProducts = products.map((product) => ({
+    ...product, status: savedStatuses[product.id] ?? product.status,
+  })).filter((product) =>
     (product.status === (view === "owned" ? "owned" : "wishlist")) &&
     (!category || product.category === category),
   )
@@ -63,7 +67,8 @@ export default function OwnerBoard({
       resetScroll: false,
     })
     setAddedId(product.id)
-    setFeedback(null)
+    setAnnouncement("")
+    setError(null)
     requestAnimationFrame(() => {
       const card = document.getElementById(`product-${product.id}`)
       card?.scrollIntoView({
@@ -73,26 +78,24 @@ export default function OwnerBoard({
     })
   }
 
-  async function changeStatus(product: CatalogProduct, target: ProductStatus, undo = false) {
+  async function changeStatus(product: CatalogProduct, target: ProductStatus) {
     if (requestPending.current) return
     requestPending.current = true
     setPending(true)
     setAddedId(undefined)
+    setError(null)
+    setAnnouncement("")
     let saved = false
     try {
       const updated = await setProductStatus({ data: { id: product.id, status: target } })
       saved = true
       const trigger = document.getElementById(`product-actions-${product.id}`)
-      const restoreFocus = document.activeElement === trigger || undo
+      const restoreFocus = document.activeElement === trigger
       const index = visibleProducts.findIndex((item) => item.id === product.id)
       const neighbor = visibleProducts[index + 1] ?? visibleProducts[index - 1]
-      await router.invalidate()
-      setFeedback(undo ? null : {
-        message: target === "owned" ? "Marked as owned" : "Moved to wishlist",
-        product: updated,
-        target: product.status,
-        failed: false,
-      })
+      if (target === "owned") await animatePurchase(product.id)
+      setSavedStatuses((statuses) => ({ ...statuses, [product.id]: updated.status }))
+      setAnnouncement(target === "owned" ? `${product.name} purchased` : `${product.name} moved to wishlist`)
       if (restoreFocus) requestAnimationFrame(() => {
         const remainingCard = document.getElementById(`product-actions-${product.id}`)
         const next = remainingCard ?? (neighbor && document.getElementById(`product-actions-${neighbor.id}`))
@@ -100,13 +103,9 @@ export default function OwnerBoard({
         const focusTarget = next || activeView
         focusTarget?.focus({ preventScroll: true })
       })
+      await router.invalidate()
     } catch (caught) {
-      setFeedback({
-        message: saved ? "Saved, but the board could not refresh. Try again." : errorMessage(caught, "The product could not be moved. Try again."),
-        product,
-        target,
-        failed: true,
-      })
+      setError(saved ? "Saved, but the board could not refresh. Reload to try again." : errorMessage(caught, "The product could not be moved. Try again."))
     } finally {
       requestPending.current = false
       setPending(false)
@@ -125,6 +124,7 @@ export default function OwnerBoard({
         action={<AddProductButton boardId={board.id} onAdded={revealProduct} onExisting={revealProduct} />}
         filters={<OwnedNavigation boardSlug={board.slug} category={category} view={view} />}
       >
+        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         <ProductGrid
           products={visibleProducts}
           ownedVisible={view === "owned"}
@@ -133,24 +133,8 @@ export default function OwnerBoard({
           renderActions={(product) => <ProductActions product={product} disabled={pending} onStatusChange={changeStatus} />}
         />
         <div aria-live="polite" aria-atomic="true" className="sr-only">
-          {feedback?.message ?? (revealedProduct ? `Showing ${revealedProduct.name} on your board` : "")}
+          {announcement || (revealedProduct ? `Showing ${revealedProduct.name} on your board` : "")}
         </div>
-        {feedback && (
-          <div className="fixed inset-x-4 bottom-5 z-20 mx-auto flex w-fit max-w-[calc(100%-2rem)] flex-wrap items-center gap-x-4 rounded-2xl border border-border bg-surface px-4 py-2 text-sm shadow-dialog">
-            <p className={feedback.failed ? "text-danger" : ""}>{feedback.message}</p>
-            {!feedback.failed && (
-              <Link className="focus-ring min-h-11 content-center underline underline-offset-4" to="/$boardSlug" params={{ boardSlug: board.slug }} search={{ view: statusView(feedback.product.status), category: undefined }} resetScroll={false}>
-                {feedback.product.status === "owned" ? "Owned" : "View wishlist"}
-              </Link>
-            )}
-            <button className="focus-ring min-h-11 cursor-pointer font-medium disabled:cursor-wait disabled:opacity-50" disabled={pending} onClick={() => void changeStatus(feedback.product, feedback.target, !feedback.failed)}>
-              {feedback.failed ? "Try again" : "Undo"}
-            </button>
-            <button className="focus-ring grid size-11 cursor-pointer place-items-center rounded-full text-muted hover:bg-bg" aria-label="Dismiss notification" onClick={() => setFeedback(null)}>
-              <CloseIcon className="size-4 fill-current" />
-            </button>
-          </div>
-        )}
       </BoardLayout>
     </ClerkProvider>
   )
