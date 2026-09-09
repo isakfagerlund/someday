@@ -8,8 +8,8 @@ export function ProductEmptyState({ boardSlug, category, view, firstFind = false
   view?: ProductView
   firstFind?: boolean
 }) {
-  const title = category ? `No products in ${category}.` : firstFind ? "Add your first find" : "No products yet"
-  const description = firstFind ? "Paste a product link to start your board." : "Products will appear here after the first link is added."
+  const title = category ? `No products in ${category}.` : view === "owned" ? "No owned products yet" : firstFind ? "Add your first find" : "No products yet"
+  const description = view === "owned" ? "Mark a product as owned to see it here." : firstFind ? "Paste a product link to start your board." : "Products will appear here after the first link is added."
 
   return (
     <section className="flex min-h-80 flex-col items-center justify-center gap-2 px-4 py-12 text-center" aria-labelledby="empty-state-title">
