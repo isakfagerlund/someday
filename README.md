@@ -87,10 +87,6 @@ Set the GitHub Actions secret `SENTRY_AUTH_TOKEN` to enable source-map uploads.
 Error reporting works without it, but stack traces may show bundled code.
 For local uploads, export the token before running `pnpm run build`.
 
-Run `pnpm run dev` and click **Test Sentry** at the bottom of the page. Look for
-`Sentry Test Error` in the project's Sentry Issues feed under `development`.
-The button is omitted from production builds.
-
 ## Clerk setup
 
 Create separate Clerk development and production instances, then configure each
