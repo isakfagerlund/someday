@@ -1,20 +1,6 @@
-import { useEffect, useRef, useState } from "react"
-
 import { primaryButtonClass } from "./ui"
 
 export function SaveSetup() {
-  const bookmarkRef = useRef<HTMLAnchorElement>(null)
-  const [bookmarklet, setBookmarklet] = useState("")
-  const [copyMessage, setCopyMessage] = useState("")
-
-  useEffect(() => {
-    const script = `javascript:void(window.open(${JSON.stringify(`${location.origin}/save?url=`)}+encodeURIComponent(location.href),'_blank','noopener,noreferrer'))`
-    setBookmarklet(script)
-    // React blocks javascript: hrefs. This fixed, first-party script is a
-    // draggable bookmark, never code supplied by a product page or query string.
-    bookmarkRef.current?.setAttribute("href", script)
-  }, [])
-
   return (
     <>
       <div className="flex flex-col gap-3">
@@ -28,29 +14,16 @@ export function SaveSetup() {
         <p className="text-sm text-muted">Open the downloaded file in Shortcuts and tap Add Shortcut. If it is missing from the share sheet, scroll down to Edit Actions and add it to your favorites.</p>
       </section>
       <section className="flex flex-col items-start gap-4 rounded-3xl border border-border bg-surface p-6" aria-labelledby="browser-heading">
-        <h2 className="text-xl font-medium" id="browser-heading">In your desktop browser</h2>
-        <p className="text-muted">Drag this button to your bookmarks bar. Click the bookmark whenever you find a product.</p>
-        <a
-          ref={bookmarkRef}
-          className="focus-ring inline-flex min-h-12 cursor-grab items-center rounded-pill border border-border px-5 font-medium no-underline active:cursor-grabbing"
-          draggable
-          href="#browser-heading"
-          onClick={(event) => { event.preventDefault(); setCopyMessage("Drag this button to your bookmarks bar, then use it on a product page.") }}
-        >Save to someday</a>
-        <details className="w-full text-sm">
-          <summary className="focus-ring min-h-11 cursor-pointer content-center text-muted">Prefer to add it manually?</summary>
-          <p className="my-3 text-muted">Create a bookmark named Save to someday and paste this into its URL field.</p>
-          <textarea className="focus-ring w-full rounded-lg border border-border bg-bg p-3 text-xs" aria-label="Bookmark URL" rows={4} readOnly value={bookmarklet} onFocus={(event) => event.target.select()} />
-          <button className="focus-ring min-h-11 cursor-pointer underline underline-offset-4" type="button" onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(bookmarklet)
-              setCopyMessage("Bookmark URL copied")
-            } catch {
-              setCopyMessage("Select the bookmark URL above and copy it manually.")
-            }
-          }}>Copy bookmark URL</button>
-        </details>
-        <p className="text-sm text-muted" role="status">{copyMessage}</p>
+        <h2 className="text-xl font-medium" id="browser-heading">In Chrome</h2>
+        <p className="text-muted">Pin the someday extension to your toolbar. Click it on a product page to choose a board and save.</p>
+        <a className={`${primaryButtonClass} inline-flex min-h-12 items-center no-underline`} href="/extensions/someday-chrome.zip" download>Download Chrome extension</a>
+        <ol className="list-decimal space-y-2 pl-5 text-sm text-muted">
+          <li>Unzip the download and keep the folder on your computer.</li>
+          <li>Open <code>chrome://extensions</code> and turn on Developer mode.</li>
+          <li>Click Load unpacked and select the unzipped folder.</li>
+          <li>Open Chrome’s extensions menu and pin Save to someday.</li>
+        </ol>
+        <p className="text-sm text-muted">This first version installs manually. It is not listed in the Chrome Web Store yet.</p>
       </section>
     </>
   )

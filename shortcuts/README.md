@@ -20,7 +20,7 @@ credentials. Commit both the source and signed download when changing it.
 
 For a preview deployment, edit the destination in the URL action to that preview's
 origin before signing a temporary test copy. The distributed Shortcut always opens
-production. The bookmarklet on `/save` uses the origin it was installed from.
+production. See [the Chrome extension](../chrome-extension/README.md) for desktop capture.
 
 ## Manual checks
 
@@ -31,7 +31,5 @@ production. The bookmarklet on `/save` uses the origin it was installed from.
 - With one board, the preview opens immediately. With multiple boards, choose one.
 - Cancel, reopen, save, and open an existing product. Creating a first board should
   return to the shared link.
-- Drag the bookmarklet from `/save` into the desktop bookmarks bar, visit a product
-  page, and run it. A new Someday tab should open with that page's URL.
 
 Reference: [Apple's Shortcuts command-line guide](https://support.apple.com/en-ph/guide/shortcuts-mac/-apd455c82f02/mac).
