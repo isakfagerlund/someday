@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@11.10.0",
   "scripts": {
-    "dev": "vite dev",
+    "dev": "pnpm run build:extension && vite dev",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
     "db:check": "drizzle-kit check",
@@ -14,7 +14,8 @@
     "types:check": "wrangler types --check",
     "typecheck": "tsc --noEmit",
     "check": "pnpm run types:check && pnpm run typecheck && pnpm run db:check && pnpm test && pnpm run build",
-    "build": "vite build",
+    "build:extension": "node --experimental-strip-types chrome-extension/build.ts",
+    "build": "pnpm run build:extension && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "@cloudflare/vite-plugin": "^1.54.4",
     "@cloudflare/vitest-plugin": "^1.1.2",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/chrome": "^0.2.9",
     "@types/node": "^26.4.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",

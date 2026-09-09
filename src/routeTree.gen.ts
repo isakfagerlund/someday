@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BoardSlugRouteImport } from './routes/$boardSlug'
+import { Route as SaveRouteImport } from './routes/save'
 import { Route as AuthRedirectRouteImport } from './routes/auth.redirect'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const BoardSlugRoute = BoardSlugRouteImport.update({
   path: '/$boardSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SaveRoute = SaveRouteImport.update({
+  id: '/save',
+  path: '/save',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRedirectRoute = AuthRedirectRouteImport.update({
   id: '/auth/redirect',
   path: '/auth/redirect',
@@ -32,30 +38,34 @@ const AuthRedirectRoute = AuthRedirectRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$boardSlug': typeof BoardSlugRoute
+  '/save': typeof SaveRoute
   '/auth/redirect': typeof AuthRedirectRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$boardSlug': typeof BoardSlugRoute
+  '/save': typeof SaveRoute
   '/auth/redirect': typeof AuthRedirectRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$boardSlug': typeof BoardSlugRoute
+  '/save': typeof SaveRoute
   '/auth/redirect': typeof AuthRedirectRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$boardSlug' | '/auth/redirect'
+  fullPaths: '/' | '/$boardSlug' | '/save' | '/auth/redirect'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$boardSlug' | '/auth/redirect'
-  id: '__root__' | '/' | '/$boardSlug' | '/auth/redirect'
+  to: '/' | '/$boardSlug' | '/save' | '/auth/redirect'
+  id: '__root__' | '/' | '/$boardSlug' | '/save' | '/auth/redirect'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BoardSlugRoute: typeof BoardSlugRoute
+  SaveRoute: typeof SaveRoute
   AuthRedirectRoute: typeof AuthRedirectRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BoardSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/save': {
+      id: '/save'
+      path: '/save'
+      fullPath: '/save'
+      preLoaderRoute: typeof SaveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/redirect': {
       id: '/auth/redirect'
       path: '/auth/redirect'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BoardSlugRoute: BoardSlugRoute,
+  SaveRoute: SaveRoute,
   AuthRedirectRoute: AuthRedirectRoute,
 }
 export const routeTree = rootRouteImport

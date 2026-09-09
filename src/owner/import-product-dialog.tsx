@@ -17,6 +17,7 @@ import {
   setProductStatus,
 } from "../server/products"
 import { MorphDialog } from "./morph-dialog"
+import { SaveSetup } from "./save-setup"
 import {
   backdropClass,
   DialogHeading,
@@ -30,14 +31,16 @@ const urlInputClass =
 
 export function AddProductButton({
   boardId,
+  initialUrl = "",
   onAdded,
   onExisting,
 }: {
   boardId: string
+  initialUrl?: string
   onAdded: (product: CatalogProduct) => Promise<void>
   onExisting: (product: CatalogProduct) => Promise<void>
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(Boolean(initialUrl))
   const [saving, setSaving] = useState(false)
 
   return (
@@ -57,6 +60,7 @@ export function AddProductButton({
         <Dialog.Backdrop className={backdropClass} />
         <ImportProductForm
           boardId={boardId}
+          initialUrl={initialUrl}
           onSaving={setSaving}
           onAdded={async (product) => {
             await onAdded(product)
@@ -76,16 +80,20 @@ export function AddProductButton({
 
 function ImportProductForm({
   boardId,
+  initialUrl,
   onSaving,
   onAdded,
   onExisting,
 }: {
   boardId: string
+  initialUrl: string
   onSaving: (saving: boolean) => void
   onAdded: (product: CatalogProduct) => Promise<void>
   onExisting: (product: CatalogProduct) => Promise<void>
 }) {
   const [preview, setPreview] = useState<ProductImportPreview | null>(null)
+  const [showSetup, setShowSetup] = useState(false)
+  const backRef = useRef<HTMLButtonElement>(null)
   const [duplicate, setDuplicate] = useState<CatalogProduct | null>(null)
   const [imageUrl, setImageUrl] = useState("")
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -93,12 +101,20 @@ function ImportProductForm({
   const [error, setError] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const requestPending = useRef(false)
-  const [sourceUrl, setSourceUrl] = useState("")
+  const [sourceUrl, setSourceUrl] = useState(initialUrl)
   const [slow, setSlow] = useState(false)
   const [uploadUrl, setUploadUrl] = useState("")
   const phase = busy
     ? preview ? "saving" : "finding"
     : preview ? "choosing" : "url"
+
+  useEffect(() => {
+    if (initialUrl) void loadPreview(initialUrl)
+  }, [initialUrl])
+
+  useEffect(() => {
+    if (showSetup) backRef.current?.focus({ preventScroll: true })
+  }, [showSetup])
 
   useEffect(() => {
     if (!imageFile) return setUploadUrl("")
@@ -193,6 +209,16 @@ function ImportProductForm({
       onSaving(false)
     }
   }
+
+  if (showSetup) return (
+    <MorphDialog phase="setup">
+      <button ref={backRef} className="focus-ring mb-2 inline-flex min-h-11 cursor-pointer items-center gap-1 text-sm text-muted hover:text-text" type="button" onClick={() => setShowSetup(false)}>
+        <ChevronLeftIcon className="size-4 fill-current" /> Back to add product
+      </button>
+      <DialogHeading className="mb-4" closeLabel="Close add product dialog">Save while you browse</DialogHeading>
+      <SaveSetup />
+    </MorphDialog>
+  )
 
   return (
     <MorphDialog phase={phase}>
@@ -332,6 +358,9 @@ function ImportProductForm({
                 Find
               </button>
             </div>
+            <button className="focus-ring mt-4 inline-flex min-h-11 cursor-pointer items-center text-sm text-muted underline underline-offset-4 hover:text-text" type="button" onClick={() => setShowSetup(true)}>
+              Save from your browser or iPhone
+            </button>
           </div>
         )}
         <ErrorMessage message={error} />
