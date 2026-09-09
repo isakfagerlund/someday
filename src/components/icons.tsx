@@ -44,6 +44,12 @@ export const EditIcon = (props: IconProps) => (
   />
 )
 
+export const DotsThreeIcon = (props: IconProps) => (
+  <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" aria-hidden="true" focusable="false">
+    <circle cx="48" cy="128" r="16" /><circle cx="128" cy="128" r="16" /><circle cx="208" cy="128" r="16" />
+  </svg>
+)
+
 export const PlusIcon = (props: IconProps) => (
   <Icon
     {...props}

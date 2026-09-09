@@ -3,14 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({
   collectProductEvidence: vi.fn(),
   insertProduct: vi.fn(),
-  productExists: vi.fn(),
+  getProductByUrl: vi.fn(),
   searchProduct: vi.fn(),
   storeProductImage: vi.fn(),
 }))
 
 vi.mock("../db/products", () => ({
   insertProduct: mocks.insertProduct,
-  productExists: mocks.productExists,
+  getProductByUrl: mocks.getProductByUrl,
 }))
 vi.mock("../images", () => ({
   deleteProductImage: vi.fn(),
@@ -107,9 +107,22 @@ describe("productImageChoices", () => {
 })
 
 describe("createProduct", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it.each(["owned", "archived"])("returns the existing %s product without importing its image again", async (status) => {
+    const product = { id: "existing-product", status }
+    mocks.getProductByUrl.mockResolvedValue(product)
+    await expect(createProduct({
+      sourceUrl, canonicalUrl: sourceUrl, name: "Dress", brand: "COS", category: "Clothing",
+      imageUrl: "https://media.cos.com/dress-front.jpg", method: "search",
+    }, "default", {} as Env)).rejects.toMatchObject({ name: "DuplicateProductError", product })
+    expect(mocks.storeProductImage).not.toHaveBeenCalled()
+    expect(mocks.insertProduct).not.toHaveBeenCalled()
+  })
+
   it("stores the image selected by the user before inserting the product", async () => {
     const savedProduct = { id: "product-id" }
-    mocks.productExists.mockResolvedValue(false)
+    mocks.getProductByUrl.mockResolvedValue(undefined)
     mocks.storeProductImage.mockResolvedValue({
       processedImageKey: "image-key",
       backgroundRemoved: true,

@@ -5,10 +5,11 @@ import { z } from "zod"
 import { purgeBoardCache } from "../catalog-cache"
 import { getProductBoard } from "../db/boards"
 import * as db from "../db/products"
-import { categories } from "../domain/product"
+import { categories, productStatuses } from "../domain/product"
 import { deleteProductImage } from "../images"
 import {
   createProduct as importProduct,
+  DuplicateProductError,
   previewProduct as importPreview,
 } from "../import/import-product"
 import { getViewerId, requireOwnedBoard } from "./viewer"
@@ -56,10 +57,25 @@ export const createProduct = createServerFn({ method: "POST" })
   .validator((form: FormData) => parseCreateProductInput(form))
   .handler(async ({ data, context }) => {
     const { board } = await requireOwnedBoard(data.boardId)
-    const product = await importProduct(data, board.id, env)
+    try {
+      const product = await importProduct(data, board.id, env)
+      await purgeBoardCache(context.ctx, board.id)
+      return { kind: "created" as const, product }
+    } catch (error) {
+      if (error instanceof DuplicateProductError) {
+        return { kind: "duplicate" as const, product: error.product }
+      }
+      throw error
+    }
+  })
 
-    await purgeBoardCache(context.ctx, board.id)
-
+export const setProductStatus = createServerFn({ method: "POST" })
+  .validator(productIdInput.extend({ status: z.enum(productStatuses) }))
+  .handler(async ({ data: { id, status }, context }) => {
+    const boardId = await requireProductOwnership(id)
+    const product = await db.setProductStatus(env.DB, id, boardId, status)
+    if (!product) throw new Error("Product not found")
+    await purgeBoardCache(context.ctx, boardId)
     return product
   })
 

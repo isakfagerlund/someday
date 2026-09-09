@@ -37,8 +37,15 @@ it("migrates existing data and lists only the owner's boards with their own prod
     subjectPosition: { x: 0.5, y: 0.5 },
     importEvidence: "{}",
   }
-  await insertProduct(env.DB, boardA.id, product)
-  await applyMigration(migrations[multipleBoardsPath])
+  // Seed the historical schema directly; the current helper includes newer columns.
+  await env.DB.prepare(`INSERT INTO products
+    (id, board_id, source_url, canonical_url, name, brand, category, image_key, import_evidence)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .bind(product.id, boardA.id, product.sourceUrl, product.canonicalUrl, product.name,
+      product.brand, product.category, product.processedImageKey, product.importEvidence).run()
+  for (const [path, sql] of entries) {
+    if (path >= multipleBoardsPath) await applyMigration(sql)
+  }
   await insertBoard(env.DB, { id: "b", name: "B", slug: "board-b", clerkOwnerId: "owner" })
   await insertBoard(env.DB, { id: "c", name: "C", slug: "board-c", clerkOwnerId: "other-owner" })
   await insertProduct(env.DB, "b", { ...product, id: "lamp-b", processedImageKey: "lamp-b.webp" })

@@ -1,12 +1,13 @@
-import { and, desc, eq } from "drizzle-orm"
+import { and, desc, eq, or, sql } from "drizzle-orm"
 
 import type {
   CatalogProduct,
   NewProduct,
   ProductUpdates,
+  ProductStatus,
 } from "../domain/product"
 import { createDb } from "./index"
-import { products } from "./schema"
+import { boards, products } from "./schema"
 
 const catalogProductColumns = {
   id: products.id,
@@ -14,6 +15,8 @@ const catalogProductColumns = {
   name: products.name,
   brand: products.brand,
   category: products.category,
+  status: products.status,
+  ownedAt: products.ownedAt,
   originalImageUrl: products.originalImageUrl,
   processedImageKey: products.processedImageKey,
   backgroundRemoved: products.backgroundRemoved,
@@ -24,22 +27,30 @@ const catalogProductColumns = {
 export async function listProducts(
   database: D1Database,
   boardId: string,
+  viewerId: string | null = null,
 ): Promise<CatalogProduct[]> {
   return createDb(database)
     .select(catalogProductColumns)
     .from(products)
-    .where(eq(products.boardId, boardId))
+    .innerJoin(boards, eq(products.boardId, boards.id))
+    .where(and(
+      eq(products.boardId, boardId),
+      or(
+        eq(products.status, "wishlist"),
+        viewerId ? eq(boards.clerkOwnerId, viewerId) : undefined,
+      ),
+    ))
     .orderBy(desc(products.createdAt))
     .all()
 }
 
-export async function productExists(
+export async function getProductByUrl(
   database: D1Database,
   boardId: string,
   canonicalUrl: string,
 ) {
-  const product = await createDb(database)
-    .select({ id: products.id })
+  return createDb(database)
+    .select(catalogProductColumns)
     .from(products)
     .where(
       and(
@@ -48,8 +59,27 @@ export async function productExists(
       ),
     )
     .get()
+}
 
-  return Boolean(product)
+export async function setProductStatus(
+  database: D1Database,
+  id: string,
+  boardId: string,
+  status: ProductStatus,
+) {
+  const now = new Date()
+  return createDb(database)
+    .update(products)
+    .set({
+      status,
+      ownedAt: status === "owned"
+        ? sql`coalesce(${products.ownedAt}, ${now.getTime()})`
+        : null,
+      updatedAt: now,
+    })
+    .where(and(eq(products.id, id), eq(products.boardId, boardId)))
+    .returning(catalogProductColumns)
+    .get()
 }
 
 export async function insertProduct(

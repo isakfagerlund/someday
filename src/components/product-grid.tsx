@@ -1,38 +1,46 @@
+import { useLayoutEffect, useRef } from "react"
+
 import type { CatalogProduct } from "../domain/product"
 
 interface ProductGridProps {
   addedProductId?: string
   products: CatalogProduct[]
   renderActions?: (product: CatalogProduct) => React.ReactNode
-  emptyTitle?: string
-  emptyDescription?: string
+  emptyState: React.ReactNode
+  ownedVisible?: boolean
 }
 
 export function ProductGrid({
   products,
   renderActions,
   addedProductId,
-  emptyTitle = "No products yet",
-  emptyDescription = "Products will appear here after the first link is added.",
+  emptyState,
+  ownedVisible = false,
 }: ProductGridProps) {
-  if (products.length === 0) {
-    return (
-      <section
-        className="flex min-h-80 flex-col items-center justify-center gap-2 px-4 py-12 text-center"
-        aria-labelledby="empty-state-title"
-      >
-        <h2 className="font-medium" id="empty-state-title">
-          {emptyTitle}
-        </h2>
-        <p className="text-muted">
-          {emptyDescription}
-        </p>
-      </section>
-    )
-  }
+  const gridRef = useRef<HTMLUListElement>(null)
+  const previousOwnedVisible = useRef(ownedVisible)
+
+  useLayoutEffect(() => {
+    const revealing = ownedVisible && !previousOwnedVisible.current
+    previousOwnedVisible.current = ownedVisible
+    if (!revealing || matchMedia("(prefers-reduced-motion: reduce)").matches) return
+
+    const cards = gridRef.current?.querySelectorAll<HTMLElement>("[data-owned]") ?? []
+    const animations = Array.from(cards, (card, index) => card.animate(
+      [
+        { opacity: 0, transform: "translateY(12px) scale(0.97)" },
+        { opacity: 1, transform: "translateY(0) scale(1)" },
+      ],
+      { duration: 280, delay: Math.min(index * 30, 120), easing: "cubic-bezier(0.23, 1, 0.32, 1)", fill: "backwards" },
+    ))
+    return () => animations.forEach((animation) => animation.cancel())
+  }, [ownedVisible])
+
+  if (products.length === 0) return emptyState
 
   return (
     <ul
+      ref={gridRef}
       className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4"
       role="list"
     >
@@ -40,6 +48,7 @@ export function ProductGrid({
         <li
           key={product.id}
           id={`product-${product.id}`}
+          data-owned={product.status === "owned" ? "" : undefined}
           className={
             product.id === addedProductId ? "product-arrival" : undefined
           }
@@ -61,6 +70,7 @@ function ProductCard({
   product: CatalogProduct
   priority: boolean
 }) {
+  const owned = product.status === "owned"
   const imageUrl = product.processedImageKey
     ? `/images/${encodeURIComponent(product.processedImageKey)}`
     : null
@@ -70,7 +80,11 @@ function ProductCard({
       className="focus-ring flex flex-col gap-3 no-underline focus-visible:outline-offset-4"
       href={product.sourceUrl}
     >
-      <span className="relative block aspect-[4/5] overflow-hidden rounded-lg bg-surface after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:border after:border-[oklch(0_0_0/0.1)] after:content-[''] dark:after:border-[oklch(1_0_0/0.1)]">
+      <span
+        className={`relative isolate block aspect-[4/5] overflow-hidden rounded-lg bg-surface after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:border after:border-[oklch(0_0_0/0.1)] after:content-[''] dark:after:border-[oklch(1_0_0/0.1)] ${owned ? "owned-image" : ""}`}
+        onPointerMove={owned ? followShine : undefined}
+        onPointerLeave={owned ? resetShine : undefined}
+      >
         {imageUrl && (
           <img
             className="size-full object-cover transition-transform duration-[220ms] ease-out group-hover:scale-[1.015] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
@@ -85,6 +99,7 @@ function ProductCard({
             decoding="async"
           />
         )}
+        {owned && <span className="owned-foil" aria-hidden="true" />}
       </span>
       <span className="flex flex-col gap-1">
         <span className="text-[0.8125rem] tracking-[0.04em] uppercase text-muted">
@@ -96,4 +111,17 @@ function ProductCard({
       </span>
     </a>
   )
+}
+
+// Update only the hovered image; pointer movement never rerenders the grid.
+function followShine(event: React.PointerEvent<HTMLSpanElement>) {
+  if (event.pointerType !== "mouse" || matchMedia("(prefers-reduced-motion: reduce)").matches) return
+  const bounds = event.currentTarget.getBoundingClientRect()
+  event.currentTarget.style.setProperty("--shine-x", `${(event.clientX - bounds.left) / bounds.width * 100}%`)
+  event.currentTarget.style.setProperty("--shine-y", `${(event.clientY - bounds.top) / bounds.height * 100}%`)
+}
+
+function resetShine(event: React.PointerEvent<HTMLSpanElement>) {
+  event.currentTarget.style.removeProperty("--shine-x")
+  event.currentTarget.style.removeProperty("--shine-y")
 }
