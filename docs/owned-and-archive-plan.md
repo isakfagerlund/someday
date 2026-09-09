@@ -1,6 +1,6 @@
 # Owned products
 
-This branch temporarily compares four collection controls: a quiet text action, a collection dropdown, a header overflow menu, and simple text tabs. Each switches between Wishlist and Owned, preserving the category filter. The default view is Wishlist. An owner-only development selector at the bottom cycles through the four designs. There is no Archive page, Archive link, or "Not interested anymore" action.
+This branch temporarily compares four collection controls: a quiet text action, a collection dropdown, a header overflow menu, and simple text tabs. The quiet text action stays beside categories on desktop and floats at the bottom right on mobile, above the temporary comparison tool. Each switches between Wishlist and Owned, preserving the category filter. The default view is Wishlist. An owner-only development selector at the bottom cycles through the four designs. There is no Archive page, Archive link, or "Not interested anymore" action.
 
 Only the signed-in board owner sees the collection controls, development selector, and product actions. Visitors, including signed-in users viewing someone else's board, receive only wishlist products from the server. Opening `?view=owned` does not expose owned products to visitors. An old `?view=archive` URL falls back to the ordinary wishlist.
 

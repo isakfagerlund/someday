@@ -141,7 +141,7 @@ export default function OwnerBoard({
           {feedback?.message ?? (revealedProduct ? `Showing ${revealedProduct.name} on your board` : "")}
         </div>
         {feedback && (
-          <div className="fixed inset-x-4 bottom-20 z-20 mx-auto flex w-fit max-w-[calc(100%-2rem)] flex-wrap items-center gap-x-4 rounded-2xl border border-border bg-surface px-4 py-2 text-sm shadow-dialog">
+          <div className="fixed inset-x-4 bottom-36 z-20 md:bottom-20 mx-auto flex w-fit max-w-[calc(100%-2rem)] flex-wrap items-center gap-x-4 rounded-2xl border border-border bg-surface px-4 py-2 text-sm shadow-dialog">
             <p className={feedback.failed ? "text-danger" : ""}>{feedback.message}</p>
             {!feedback.failed && (
               <Link className="focus-ring min-h-11 content-center underline underline-offset-4" to="/$boardSlug" params={{ boardSlug: board.slug }} search={{ view: statusView(feedback.product.status), category: undefined }} resetScroll={false}>

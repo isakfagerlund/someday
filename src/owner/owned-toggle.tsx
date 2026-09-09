@@ -31,7 +31,7 @@ export function OwnedToggle({ boardSlug, category, view, option }: {
   })
 
   if (option === "Quiet text action") return (
-    <button type="button" id="owned-toggle" className={buttonClass} onClick={() => navigate(owned ? undefined : "owned")}>
+    <button type="button" id="owned-toggle" className={`${buttonClass} fixed right-4 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-20 rounded-pill border border-border bg-surface px-4 text-text shadow-surface-hover md:static md:rounded-sm md:border-0 md:bg-transparent md:px-0 md:text-muted md:shadow-none`} onClick={() => navigate(owned ? undefined : "owned")}>
       {owned ? "← Back to wishlist" : "View owned →"}
     </button>
   )
