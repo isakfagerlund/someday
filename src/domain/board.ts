@@ -4,6 +4,7 @@ export const reservedBoardSlugs = new Set([
   "catalog",
   "health",
   "images",
+  "save",
 ])
 
 export function boardSlugFromName(name: string) {

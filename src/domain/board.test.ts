@@ -14,5 +14,6 @@ describe("board slugs", () => {
       "someday-3",
     )
     expect(uniqueBoardSlug("API", [])).toBe("api-2")
+    expect(uniqueBoardSlug("Save", [])).toBe("save-2")
   })
 })

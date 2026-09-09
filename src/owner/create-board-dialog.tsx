@@ -14,7 +14,7 @@ import {
   primaryButtonClass,
 } from "./ui"
 
-export function CreateBoardDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function CreateBoardDialog({ open, onOpenChange, returnTo }: { open: boolean; onOpenChange: (open: boolean) => void; returnTo?: string }) {
   const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -28,7 +28,7 @@ export function CreateBoardDialog({ open, onOpenChange }: { open: boolean; onOpe
 
     try {
       const board = await createBoard({ data: { name } })
-      location.assign(`/${encodeURIComponent(board.slug)}`)
+      location.assign(returnTo ?? `/${encodeURIComponent(board.slug)}`)
     } catch (caught) {
       setError(errorMessage(caught, "The board could not be created."))
       setSaving(false)
