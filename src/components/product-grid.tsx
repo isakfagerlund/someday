@@ -99,14 +99,7 @@ function ProductCard({
             decoding="async"
           />
         )}
-        {owned && (
-          <>
-            <span className="owned-foil" aria-hidden="true" />
-            <span className="absolute top-3 right-3 z-3 rounded-pill bg-[color-mix(in_srgb,var(--color-surface)_90%,transparent)] px-3 py-1.5 text-xs text-text">
-              Owned
-            </span>
-          </>
-        )}
+        {owned && <span className="owned-foil" aria-hidden="true" />}
       </span>
       <span className="flex flex-col gap-1">
         <span className="text-[0.8125rem] tracking-[0.04em] uppercase text-muted">

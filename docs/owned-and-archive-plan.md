@@ -6,7 +6,7 @@ Only the signed-in board owner sees the toggle and product actions. Visitors, in
 
 ## Appearance and motion
 
-Owned products use the normal card with an iridescent edge, subtle textured foil reflection, and a plain "Owned" badge in the image’s top-right corner. The actions menu sits in the top-left corner. The foil drifts continuously on a 24-second loop, including on touch devices, with offset phases between cards. Mouse movement adds a soft highlight. Reduced-motion users get a static foil finish.
+Owned products use the normal card with an iridescent edge and subtle textured foil reflection. The foil and toggle identify owned products without a visible label. The actions menu sits in the top-left corner. The foil drifts continuously on a 24-second loop, including on touch devices, with offset phases between cards. Mouse movement adds a soft highlight. Reduced-motion users get a static foil finish.
 
 When the toggle turns on, newly revealed owned cards fade in and rise 12px with a small scale change over 280ms. Their entrances stagger by 30ms, capped at 120ms. Existing wishlist cards do not replay the entrance. Initial page loads and category changes do not trigger it. Turning the toggle off cancels any unfinished entrances. Reduced motion skips the animation.
 
