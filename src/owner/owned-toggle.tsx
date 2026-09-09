@@ -13,7 +13,7 @@ export const ownedNavigationOptions = [
 
 export type OwnedNavigationOption = typeof ownedNavigationOptions[number]
 
-const buttonClass = "focus-ring min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-sm text-sm text-muted hover:text-text"
+const buttonClass = "focus-ring min-h-11 shrink-0 cursor-pointer whitespace-nowrap text-sm text-muted hover:text-text"
 
 export function OwnedToggle({ boardSlug, category, view, option }: {
   boardSlug: string
