@@ -16,7 +16,7 @@ export default function QuickSave({ url, signedIn, ownerBoards, clerkPublishable
 }) {
   const [board, setBoard] = useState(ownerBoards.length === 1 ? ownerBoards[0] : undefined)
   const [creating, setCreating] = useState(false)
-  if (url === undefined) return <SaveSetup />
+  if (url === undefined) return <><h1 className="text-3xl font-medium">Keep a good find</h1><SaveSetup /></>
 
   let productUrl: URL
   try {

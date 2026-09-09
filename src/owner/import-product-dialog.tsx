@@ -17,6 +17,7 @@ import {
   setProductStatus,
 } from "../server/products"
 import { MorphDialog } from "./morph-dialog"
+import { SaveSetup } from "./save-setup"
 import {
   backdropClass,
   DialogHeading,
@@ -91,6 +92,8 @@ function ImportProductForm({
   onExisting: (product: CatalogProduct) => Promise<void>
 }) {
   const [preview, setPreview] = useState<ProductImportPreview | null>(null)
+  const [showSetup, setShowSetup] = useState(false)
+  const backRef = useRef<HTMLButtonElement>(null)
   const [duplicate, setDuplicate] = useState<CatalogProduct | null>(null)
   const [imageUrl, setImageUrl] = useState("")
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -108,6 +111,10 @@ function ImportProductForm({
   useEffect(() => {
     if (initialUrl) void loadPreview(initialUrl)
   }, [initialUrl])
+
+  useEffect(() => {
+    if (showSetup) backRef.current?.focus({ preventScroll: true })
+  }, [showSetup])
 
   useEffect(() => {
     if (!imageFile) return setUploadUrl("")
@@ -202,6 +209,16 @@ function ImportProductForm({
       onSaving(false)
     }
   }
+
+  if (showSetup) return (
+    <MorphDialog phase="setup">
+      <button ref={backRef} className="focus-ring mb-2 inline-flex min-h-11 cursor-pointer items-center gap-1 text-sm text-muted hover:text-text" type="button" onClick={() => setShowSetup(false)}>
+        <ChevronLeftIcon className="size-4 fill-current" /> Back to add product
+      </button>
+      <DialogHeading className="mb-4" closeLabel="Close add product dialog">Save while you browse</DialogHeading>
+      <SaveSetup />
+    </MorphDialog>
+  )
 
   return (
     <MorphDialog phase={phase}>
@@ -341,9 +358,9 @@ function ImportProductForm({
                 Find
               </button>
             </div>
-            <a className="focus-ring mt-4 inline-flex min-h-11 items-center text-sm text-muted underline underline-offset-4 hover:text-text" href="/save">
+            <button className="focus-ring mt-4 inline-flex min-h-11 cursor-pointer items-center text-sm text-muted underline underline-offset-4 hover:text-text" type="button" onClick={() => setShowSetup(true)}>
               Save from your browser or iPhone
-            </a>
+            </button>
           </div>
         )}
         <ErrorMessage message={error} />
