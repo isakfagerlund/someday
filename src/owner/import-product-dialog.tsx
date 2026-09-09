@@ -16,6 +16,10 @@ import {
   previewProduct,
   setProductStatus,
 } from "../server/products"
+import {
+  compressProductImage,
+  compressRemoteProductImage,
+} from "./compress-product-image"
 import { MorphDialog } from "./morph-dialog"
 import { SaveSetup } from "./save-setup"
 import {
@@ -177,6 +181,13 @@ function ImportProductForm({
         throw new Error("Choose or upload an image.")
       }
 
+      const preparedImage = imageFile
+        ? await compressProductImage(imageFile)
+        : await compressRemoteProductImage(imageUrl.trim())
+      if (preparedImage && preparedImage.size > maxUploadBytes) {
+        throw new Error("That image is still larger than 20 MB after compression. Choose another one.")
+      }
+
       const data = new FormData()
       const fields = {
         boardId,
@@ -185,13 +196,13 @@ function ImportProductForm({
         name: preview.name,
         brand: preview.brand,
         category: preview.category,
-        imageUrl: imageFile ? "" : imageUrl.trim(),
+        imageUrl: preparedImage ? "" : imageUrl.trim(),
         method: preview.method,
       }
 
       for (const [field, value] of Object.entries(fields))
         data.append(field, value)
-      if (imageFile) data.append("imageFile", imageFile)
+      if (preparedImage) data.append("imageFile", preparedImage, "product-image")
 
       const result = await createProduct({ data })
       if (result.kind === "duplicate") {
@@ -505,9 +516,6 @@ function ImageUpload({
     if (!candidate) return
     if (!candidate.type.startsWith("image/"))
       return onError("Choose an image file.")
-    if (candidate.size > maxUploadBytes) {
-      return onError("That image is larger than 20 MB.")
-    }
 
     onError(null)
     onChange(candidate)
