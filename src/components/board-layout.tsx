@@ -17,7 +17,7 @@ interface BoardLayoutProps {
 
 export function BoardLayout({ action, navigation, filters, view, board, category, children }: BoardLayoutProps) {
   return (
-    <main className="wrapper flex flex-col gap-8 pt-[clamp(3rem,9vw,7rem)] pb-28">
+    <main className="wrapper flex flex-col gap-8 py-[clamp(3rem,9vw,7rem)]">
       {navigation}
       <div className="flex items-center justify-between gap-3">
         <h1 className="flex min-w-0 items-center gap-3 font-medium leading-[1.02] tracking-[-0.065em]">

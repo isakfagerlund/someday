@@ -15,7 +15,7 @@ import {
   type ProductView,
 } from "../domain/product"
 import { setProductStatus } from "../server/products"
-import { OwnedToggle, OwnedNavigationDevTool, type OwnedNavigationOption } from "./owned-toggle"
+import { OwnedNavigation } from "./owned-navigation"
 import { AddProductButton } from "./import-product-dialog"
 import { ProductActions } from "./product-actions"
 import { errorMessage } from "./ui"
@@ -41,7 +41,6 @@ export default function OwnerBoard({
   board, category, view, clerkPublishableKey, products, hasMultipleBoards,
 }: OwnerBoardProps) {
   const router = useRouter()
-  const [navigationOption, setNavigationOption] = useState<OwnedNavigationOption>("Quiet text action")
   const [addedId, setAddedId] = useState<string>()
   const [pending, setPending] = useState(false)
   const requestPending = useRef(false)
@@ -97,7 +96,7 @@ export default function OwnerBoard({
       if (restoreFocus) requestAnimationFrame(() => {
         const remainingCard = document.getElementById(`product-actions-${product.id}`)
         const next = remainingCard ?? (neighbor && document.getElementById(`product-actions-${neighbor.id}`))
-        const activeView = document.getElementById("owned-toggle")
+        const activeView = document.getElementById("owned-navigation")
         const focusTarget = next || activeView
         focusTarget?.focus({ preventScroll: true })
       })
@@ -123,13 +122,9 @@ export default function OwnerBoard({
         navigation={hasMultipleBoards ? (
           <a className="focus-ring -my-2 inline-flex min-h-11 w-fit items-center text-sm text-muted no-underline hover:text-text" href="/#boards-heading">Your boards</a>
         ) : undefined}
-        action={<div className="flex shrink-0 items-center gap-1">
-          {navigationOption === "Overflow menu" && <OwnedToggle boardSlug={board.slug} category={category} view={view} option={navigationOption} />}
-          <AddProductButton boardId={board.id} onAdded={revealProduct} onExisting={revealProduct} />
-        </div>}
-        filters={navigationOption !== "Overflow menu" && <OwnedToggle boardSlug={board.slug} category={category} view={view} option={navigationOption} />}
+        action={<AddProductButton boardId={board.id} onAdded={revealProduct} onExisting={revealProduct} />}
+        filters={<OwnedNavigation boardSlug={board.slug} category={category} view={view} />}
       >
-        <OwnedNavigationDevTool option={navigationOption} onChange={setNavigationOption} />
         <ProductGrid
           products={visibleProducts}
           ownedVisible={view === "owned"}
@@ -141,7 +136,7 @@ export default function OwnerBoard({
           {feedback?.message ?? (revealedProduct ? `Showing ${revealedProduct.name} on your board` : "")}
         </div>
         {feedback && (
-          <div className="fixed inset-x-4 bottom-36 z-20 md:bottom-20 mx-auto flex w-fit max-w-[calc(100%-2rem)] flex-wrap items-center gap-x-4 rounded-2xl border border-border bg-surface px-4 py-2 text-sm shadow-dialog">
+          <div className="fixed inset-x-4 bottom-5 z-20 mx-auto flex w-fit max-w-[calc(100%-2rem)] flex-wrap items-center gap-x-4 rounded-2xl border border-border bg-surface px-4 py-2 text-sm shadow-dialog">
             <p className={feedback.failed ? "text-danger" : ""}>{feedback.message}</p>
             {!feedback.failed && (
               <Link className="focus-ring min-h-11 content-center underline underline-offset-4" to="/$boardSlug" params={{ boardSlug: board.slug }} search={{ view: statusView(feedback.product.status), category: undefined }} resetScroll={false}>

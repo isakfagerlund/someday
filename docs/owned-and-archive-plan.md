@@ -1,8 +1,8 @@
 # Owned products
 
-This branch temporarily compares four collection controls: a quiet text action, a collection dropdown, a header overflow menu, and simple text tabs. The quiet text action stays beside categories on desktop and floats at the bottom right on mobile, above the temporary comparison tool. Each switches between Wishlist and Owned, preserving the category filter. The default view is Wishlist. An owner-only development selector at the bottom cycles through the four designs. There is no Archive page, Archive link, or "Not interested anymore" action.
+The board opens in Wishlist. A quiet "View owned →" link beside the categories switches to a separate Owned collection, preserving the category filter. The link appears only on screens at least 48rem wide. Mobile has no Owned entry control; "Back to wishlist" remains available when an owner reaches Owned through a direct link or product feedback. There is no floating button, comparison tool, Archive page, or "Not interested anymore" action.
 
-Only the signed-in board owner sees the collection controls, development selector, and product actions. Visitors, including signed-in users viewing someone else's board, receive only wishlist products from the server. Opening `?view=owned` does not expose owned products to visitors. An old `?view=archive` URL falls back to the ordinary wishlist.
+Only the signed-in board owner sees collection navigation and product actions. Visitors, including signed-in users viewing someone else's board, receive only wishlist products from the server. Opening `?view=owned` does not expose owned products to visitors. An old `?view=archive` URL falls back to the ordinary wishlist.
 
 ## Appearance and motion
 
@@ -14,7 +14,7 @@ When the owner opens Owned, newly revealed owned cards fade in and rise 12px wit
 
 The menu offers "Mark as owned" or "Move to wishlist", plus "Edit product". Deletion remains in the edit dialog with confirmation. Changes have Undo and failed saves have retry feedback. Marking a product owned hides it in Wishlist and keeps it visible with its foil finish in Owned.
 
-New imports start in Wishlist and preserve an enabled toggle. Duplicate owned products offer an "Owned" link to reveal the existing card without importing another image. Previously archived records remain saved; importing their link offers "Restore to wishlist" so they can be recovered without an Archive page.
+New imports open in Wishlist. Duplicate owned products offer an "Owned" link to reveal the existing card without importing another image. Previously archived records remain saved; importing their link offers "Restore to wishlist" so they can be recovered without an Archive page.
 
 The existing database status migration, ownership checks, and server-side filtering remain in place. Mutations refresh the board loader and purge its cache.
 
