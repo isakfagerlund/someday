@@ -2,6 +2,14 @@ export const categories = ["Clothing", "Accessories", "Tech", "Home", "Other"] a
 
 export type Category = (typeof categories)[number]
 
+export const productStatuses = ["wishlist", "owned", "archived"] as const
+export type ProductStatus = (typeof productStatuses)[number]
+export type ProductView = "owned" | undefined
+
+export function statusView(status: ProductStatus): ProductView {
+  return status === "owned" ? "owned" : undefined
+}
+
 export interface SubjectPosition {
   x: number
   y: number
@@ -13,6 +21,8 @@ export interface CatalogProduct {
   name: string
   brand: string
   category: Category
+  status: ProductStatus
+  ownedAt: Date | null
   originalImageUrl: string
   processedImageKey: string
   backgroundRemoved: boolean
@@ -20,7 +30,7 @@ export interface CatalogProduct {
   subjectPosition: SubjectPosition
 }
 
-export interface NewProduct extends CatalogProduct {
+export interface NewProduct extends Omit<CatalogProduct, "status" | "ownedAt"> {
   canonicalUrl: string
   importEvidence: unknown
 }

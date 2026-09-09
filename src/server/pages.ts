@@ -32,7 +32,7 @@ export const loadBoard = createServerFn()
     const userId = await getViewerId()
     const canManage = board.clerkOwnerId === userId
     const [products, ownerBoards] = await Promise.all([
-      listProducts(env.DB, board.id),
+      listProducts(env.DB, board.id, userId),
       canManage && userId ? listBoardsByOwnerId(env.DB, userId) : Promise.resolve([]),
     ])
 

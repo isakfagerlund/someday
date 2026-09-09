@@ -199,6 +199,62 @@
 }
 .import-spinner-small { width: 16px; height: 16px; }
 .product-arrival { animation: product-arrival 450ms var(--ease-out) both; }
+/* Owned products use the ordinary card, with a foil finish on the image. */
+.owned-image {
+  --shine-x: 50%;
+  --shine-y: 50%;
+  --foil-delay: -4s;
+}
+li:nth-child(2n) .owned-image { --foil-delay: -11s; }
+li:nth-child(3n) .owned-image { --foil-delay: -17s; }
+.owned-image::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, #dbb86d, #d2b6ee 30%, #8fcfce 55%, #ead4a1 80%, #b5a0da);
+  opacity: 0.7;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+/* Layered spectral bands and fine lines borrow from poke-holo.simey.me.
+   Keep the reflection translucent so it doesn't flatten the product's shadows. */
+.owned-foil {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.18;
+  background:
+    repeating-linear-gradient(110deg, #bf98d9 0%, #8bcbd5 8%, #c4d6a0 16%, #e5c69b 24%, #bf98d9 32%),
+    repeating-linear-gradient(0deg, #999 0 1px, #888 1px 2px);
+  background-size: 300% 300%, 100% 100%;
+  background-position: 30% 50%, center;
+  background-blend-mode: soft-light;
+  mask-image: linear-gradient(115deg, transparent 5%, #000 35%, rgb(0 0 0 / 0.2) 60%, #000 85%, transparent);
+  animation: owned-foil-drift 24s ease-in-out var(--foil-delay) infinite;
+  transition: opacity 300ms var(--ease-out);
+}
+.owned-foil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at var(--shine-x) var(--shine-y), rgb(255 255 255 / 0.5), transparent 55%);
+  mix-blend-mode: soft-light;
+}
+@keyframes owned-foil-drift {
+  0%, 100% { background-position: 15% 35%, center; }
+  50% { background-position: 85% 65%, center; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .owned-image:hover .owned-foil { opacity: 0.28; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .owned-foil { animation: none; transition: none; }
+}
 @keyframes import-spin { to { rotate: 360deg; } }
 @keyframes import-sheen { from { translate: -100% 0; } to { translate: 100% 0; } }
 @keyframes product-arrival { from { opacity: 0; transform: scale(0.94); } 65% { opacity: 1; transform: scale(1.02); } to { opacity: 1; transform: scale(1); } }

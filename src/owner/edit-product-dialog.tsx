@@ -3,7 +3,6 @@ import { Dialog } from "@base-ui/react/dialog"
 import { Select } from "@base-ui/react/select"
 import { useState } from "react"
 
-import { EditIcon } from "../components/icons"
 import { categories, type CatalogProduct, type Category } from "../domain/product"
 import { deleteProduct, updateProduct } from "../server/products"
 import {
@@ -18,20 +17,17 @@ import {
   primaryButtonClass,
 } from "./ui"
 
-export function EditProductButton({ product }: { product: CatalogProduct }) {
-  const [open, setOpen] = useState(false)
-
+export function EditProductDialog({ product, open, onOpenChange, triggerRef }: {
+  product: CatalogProduct
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  triggerRef: React.RefObject<HTMLElement | null>
+}) {
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger
-        className="pressable focus-ring absolute top-3 right-3 grid size-11 cursor-pointer place-items-center rounded-pill border-0 bg-[color-mix(in_srgb,var(--color-surface)_90%,transparent)] p-0 text-text shadow-surface hover:scale-[1.04] [@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-focus-within:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100"
-        aria-label={`Edit ${product.name}`}
-      >
-        <EditIcon className="size-[1.2rem] fill-current" />
-      </Dialog.Trigger>
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop className={backdropClass} />
-        <Dialog.Popup className={`${popupClass} w-[min(100%-2rem,30rem)]`}>
+        <Dialog.Popup className={`${popupClass} w-[min(100%-2rem,30rem)]`} finalFocus={triggerRef}>
           {open && <EditProductForm product={product} />}
         </Dialog.Popup>
       </Dialog.Portal>

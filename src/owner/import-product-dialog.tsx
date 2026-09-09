@@ -14,6 +14,7 @@ import {
   createProduct,
   maxUploadBytes,
   previewProduct,
+  setProductStatus,
 } from "../server/products"
 import { MorphDialog } from "./morph-dialog"
 import {
@@ -30,9 +31,11 @@ const urlInputClass =
 export function AddProductButton({
   boardId,
   onAdded,
+  onExisting,
 }: {
   boardId: string
-  onAdded: (product: CatalogProduct) => void
+  onAdded: (product: CatalogProduct) => Promise<void>
+  onExisting: (product: CatalogProduct) => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -55,8 +58,13 @@ export function AddProductButton({
         <ImportProductForm
           boardId={boardId}
           onSaving={setSaving}
-          onAdded={(product) => {
-            onAdded(product)
+          onAdded={async (product) => {
+            await onAdded(product)
+            setSaving(false)
+            setOpen(false)
+          }}
+          onExisting={async (product) => {
+            await onExisting(product)
             setSaving(false)
             setOpen(false)
           }}
@@ -70,12 +78,15 @@ function ImportProductForm({
   boardId,
   onSaving,
   onAdded,
+  onExisting,
 }: {
   boardId: string
   onSaving: (saving: boolean) => void
-  onAdded: (product: CatalogProduct) => void
+  onAdded: (product: CatalogProduct) => Promise<void>
+  onExisting: (product: CatalogProduct) => Promise<void>
 }) {
   const [preview, setPreview] = useState<ProductImportPreview | null>(null)
+  const [duplicate, setDuplicate] = useState<CatalogProduct | null>(null)
   const [imageUrl, setImageUrl] = useState("")
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
@@ -114,6 +125,7 @@ function ImportProductForm({
     if (requestPending.current) return
     requestPending.current = true
     setError(null)
+    setDuplicate(null)
     setBusy(true)
     formRef.current?.querySelector("input")?.blur()
 
@@ -165,8 +177,15 @@ function ImportProductForm({
         data.append(field, value)
       if (imageFile) data.append("imageFile", imageFile)
 
-      const product = await createProduct({ data })
-      onAdded(product)
+      const result = await createProduct({ data })
+      if (result.kind === "duplicate") {
+        setDuplicate(result.product)
+        setBusy(false)
+        requestPending.current = false
+        onSaving(false)
+        return
+      }
+      await onAdded(result.product)
     } catch (caught) {
       setError(errorMessage(caught, "The product could not be added."))
       setBusy(false)
@@ -193,10 +212,25 @@ function ImportProductForm({
             className="mb-2"
             closeLabel={busy ? undefined : "Close add product dialog"}
           >
-            {preview ? "Make it yours" : "Add a product"}
+            {duplicate ? "Already saved" : preview ? "Make it yours" : "Add a product"}
           </DialogHeading>
         </div>
-        {phase === "finding" ? (
+        {duplicate ? (
+          <div className="flex flex-col gap-4">
+            <p role="status">{duplicate.status === "archived" ? "This product was previously archived." : `Already in ${duplicate.status === "owned" ? "Owned" : "Wishlist"}.`}</p>
+            <p className="text-sm text-muted">{duplicate.name} is already saved. You can move the existing product from its menu.</p>
+            <button className={primaryButtonClass} type="button" onClick={() => {
+              void (async () => {
+                const product = duplicate.status === "archived"
+                  ? await setProductStatus({ data: { id: duplicate.id, status: "wishlist" } })
+                  : duplicate
+                await onExisting(product)
+              })().catch((caught) => setError(errorMessage(caught, "The product could not be opened.")))
+            }}>
+              {duplicate.status === "owned" ? "Owned" : duplicate.status === "archived" ? "Restore to wishlist" : "View wishlist"}
+            </button>
+          </div>
+        ) : phase === "finding" ? (
           <div className="flex items-center gap-4" role="status">
             <span className="import-spinner shrink-0" aria-hidden="true" />
             <div className="min-w-0">

@@ -1,6 +1,6 @@
 import OpenAI from "openai"
 
-import { insertProduct, productExists } from "../db/products"
+import { insertProduct, getProductByUrl } from "../db/products"
 import type { CatalogProduct, Category } from "../domain/product"
 import { deleteProductImage, storeProductImage } from "../images"
 import { collectProductEvidence } from "./collect-product-evidence"
@@ -48,7 +48,7 @@ export interface ProductImportConfirmation {
 }
 
 export class DuplicateProductError extends Error {
-  constructor() {
+  constructor(public product: CatalogProduct) {
     super("This product is already in the catalog")
     this.name = "DuplicateProductError"
   }
@@ -265,9 +265,8 @@ export async function createProduct(
     ? ""
     : validateProductUrl(confirmation.imageUrl).href
 
-  if (await productExists(env.DB, boardId, canonicalUrl)) {
-    throw new DuplicateProductError()
-  }
+  const existing = await getProductByUrl(env.DB, boardId, canonicalUrl)
+  if (existing) throw new DuplicateProductError(existing)
 
   let image
 
@@ -310,7 +309,10 @@ export async function createProduct(
   } catch (error) {
     await removeFailedImage(env.IMAGE_BUCKET, image.processedImageKey)
 
-    if (isCanonicalUrlConflict(error)) throw new DuplicateProductError()
+    if (isCanonicalUrlConflict(error)) {
+      const duplicate = await getProductByUrl(env.DB, boardId, canonicalUrl)
+      if (duplicate) throw new DuplicateProductError(duplicate)
+    }
 
     throw error
   }

@@ -4,7 +4,8 @@ import { lazy, Suspense } from "react"
 import { boardCacheHeaders, privateHtmlCacheHeaders } from "../catalog-cache"
 import { BoardLayout } from "../components/board-layout"
 import { ProductGrid } from "../components/product-grid"
-import { type Category, isCategory } from "../domain/product"
+import { ProductEmptyState } from "../components/product-empty-state"
+import { type Category, type ProductView, isCategory } from "../domain/product"
 import { loadBoard } from "../server/pages"
 
 // Owner controls, Clerk and Base UI load only for the board's owner.
@@ -12,11 +13,12 @@ const OwnerBoard = lazy(() => import("../owner/owner-board"))
 
 export const Route = createFileRoute("/$boardSlug")({
   validateSearch: (search: Record<string, unknown>) => ({
+    view: (search.view === "owned" ? "owned" : undefined) as ProductView,
     category: isCategory(String(search.category ?? ""))
       ? (search.category as Category)
       : undefined,
   }),
-  // Category changes reuse this list; returning to the board fetches it again.
+  // View and category changes reuse this list; mutations invalidate it.
   staleTime: Infinity,
   gcTime: 0,
   loader: ({ params }) =>
@@ -46,16 +48,19 @@ export const Route = createFileRoute("/$boardSlug")({
 })
 
 function BoardPage() {
-  const { board, canManage, clerkPublishableKey, products, hasMultipleBoards } =
+  const { board, canManage, signedIn, clerkPublishableKey, products, hasMultipleBoards } =
     Route.useLoaderData()
-  const { category = null } = Route.useSearch()
+  const { category = null, view } = Route.useSearch()
   const publicBoard = (
-    <BoardLayout board={board} category={category}>
-      <ProductGrid products={products.filter((product) => !category || product.category === category)} />
+    <BoardLayout board={board} category={category} view={view}>
+      <ProductGrid
+        products={products.filter((product) => product.status === "wishlist" && (!category || product.category === category))}
+        emptyState={<ProductEmptyState boardSlug={board.slug} category={category} />}
+      />
     </BoardLayout>
   )
 
-  if (!canManage) return publicBoard
+  if (!signedIn || !canManage) return publicBoard
 
   return (
     <Suspense fallback={publicBoard}>
@@ -63,6 +68,7 @@ function BoardPage() {
         key={board.id}
         board={board}
         category={category}
+        view={view}
         clerkPublishableKey={clerkPublishableKey}
         products={products}
         hasMultipleBoards={hasMultipleBoards}

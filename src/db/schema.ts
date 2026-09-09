@@ -9,7 +9,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core"
 
-import { categories, type SubjectPosition } from "../domain/product"
+import { categories, productStatuses, type SubjectPosition } from "../domain/product"
 
 const now = sql`(unixepoch() * 1000)`
 
@@ -39,6 +39,8 @@ export const products = sqliteTable(
     name: text("name").notNull(),
     brand: text("brand").notNull(),
     category: text("category", { enum: categories }).notNull(),
+    status: text("status", { enum: productStatuses }).notNull().default("wishlist"),
+    ownedAt: integer("owned_at", { mode: "timestamp_ms" }),
     originalImageUrl: text("original_image_url").notNull().default(""),
     processedImageKey: text("image_key").notNull(),
     backgroundRemoved: integer("background_removed", { mode: "boolean" })
@@ -58,6 +60,10 @@ export const products = sqliteTable(
       .default(now),
   },
   (table) => [
+    check(
+      "products_status_check",
+      sql`${table.status} in ('wishlist', 'owned', 'archived')`,
+    ),
     check(
       "products_category_check",
       sql`${table.category} in ('Clothing', 'Accessories', 'Tech', 'Home', 'Other')`,

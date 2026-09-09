@@ -1,19 +1,21 @@
 import type { ReactNode } from "react"
 
 import type { Board } from "../db/boards"
-import type { Category } from "../domain/product"
+import type { Category, ProductView } from "../domain/product"
 import { CategoryFilters } from "./category-filters"
 import { Logo } from "./logo"
 
 interface BoardLayoutProps {
   action?: ReactNode
+  filters?: ReactNode
+  view?: ProductView
   board: Board
   category: Category | null
   children: ReactNode
   navigation?: ReactNode
 }
 
-export function BoardLayout({ action, board, category, children, navigation }: BoardLayoutProps) {
+export function BoardLayout({ action, navigation, filters, view, board, category, children }: BoardLayoutProps) {
   return (
     <main className="wrapper flex flex-col gap-8 py-[clamp(3rem,9vw,7rem)]">
       {navigation}
@@ -26,7 +28,10 @@ export function BoardLayout({ action, board, category, children, navigation }: B
         </h1>
         {action}
       </div>
-      <CategoryFilters activeCategory={category} boardSlug={board.slug} />
+      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <CategoryFilters activeCategory={category} boardSlug={board.slug} view={view} />
+        {filters}
+      </div>
       {children}
     </main>
   )
