@@ -26,9 +26,16 @@ sets the color visible behind the transparent files.
 Store the original URL, processed image key, background-removal result, subject
 scale, and subject position with the product. `backgroundRemoved` records whether
 we ran segmentation successfully; it is false for preserved cutouts. If image
-processing fails, create the same responsive variants from the original image with automatic
-cropping. If a stored variant is missing, the image route returns the retained
+processing fails, create the same responsive variants from the original image with transparent
+padding to preserve the full photo. If a stored variant is missing, the image route returns the retained
 original.
+
+Owners can choose "Use original image" when editing a product whose background
+was removed. Saving regenerates all variants from the retained source without
+segmentation, using transparent padding so the card background shows through in
+both light and dark mode. The source photo's own background remains intact.
+It assigns a fresh image key and purges the
+board cache. Previous image objects remain available for already-loaded boards.
 
 The public catalog serves the three generated files through `srcset`. It loads
 the first product image eagerly with high priority and lazy-loads later images.

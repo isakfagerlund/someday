@@ -40,9 +40,12 @@ function EditProductForm({ product, onSaved }: { product: CatalogProduct; onSave
   const router = useRouter()
   const [category, setCategory] = useState<Category>(product.category)
   const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (saving) return
+    setSaving(true)
     setError(null)
 
     const form = new FormData(event.currentTarget)
@@ -54,12 +57,14 @@ function EditProductForm({ product, onSaved }: { product: CatalogProduct; onSave
           name: String(form.get("name")),
           brand: String(form.get("brand")),
           category,
+          useOriginalImage: form.get("useOriginalImage") === "on",
         },
       })
       await router.invalidate({ sync: true })
       onSaved()
     } catch (caught) {
       setError(errorMessage(caught, "The product could not be saved."))
+      setSaving(false)
     }
   }
 
@@ -104,11 +109,28 @@ function EditProductForm({ product, onSaved }: { product: CatalogProduct; onSave
         Category
       </label>
       <CategorySelect value={category} onChange={setCategory} />
+      {product.backgroundRemoved && (
+        <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 py-2">
+          <input
+            type="checkbox"
+            name="useOriginalImage"
+            className="focus-ring mt-1 size-4 accent-current"
+            disabled={saving}
+            aria-describedby="original-image-help"
+          />
+          <span>
+            Use original image
+            <span id="original-image-help" className="mt-1 block text-sm text-muted">
+              Restore the full photo and its background if the cutout looks wrong.
+            </span>
+          </span>
+        </label>
+      )}
       <ErrorMessage message={error} />
       <div className="mt-6 flex items-center justify-between gap-3">
-        <DeleteProductButton onConfirm={remove} />
-        <button className={primaryButtonClass} type="submit">
-          Save
+        <DeleteProductButton onConfirm={remove} disabled={saving} />
+        <button className={primaryButtonClass} type="submit" disabled={saving}>
+          {saving ? "Saving…" : "Save"}
         </button>
       </div>
     </form>
@@ -156,10 +178,10 @@ function CategorySelect({
   )
 }
 
-function DeleteProductButton({ onConfirm }: { onConfirm: () => void }) {
+function DeleteProductButton({ onConfirm, disabled }: { onConfirm: () => void; disabled: boolean }) {
   return (
     <AlertDialog.Root>
-      <AlertDialog.Trigger className={dangerButtonClass}>
+      <AlertDialog.Trigger className={dangerButtonClass} disabled={disabled}>
         Delete
       </AlertDialog.Trigger>
       <AlertDialog.Portal>

@@ -61,6 +61,14 @@ export async function getProductByUrl(
     .get()
 }
 
+export async function getProduct(database: D1Database, id: string, boardId: string) {
+  return createDb(database)
+    .select(catalogProductColumns)
+    .from(products)
+    .where(and(eq(products.id, id), eq(products.boardId, boardId)))
+    .get()
+}
+
 export async function setProductStatus(
   database: D1Database,
   id: string,

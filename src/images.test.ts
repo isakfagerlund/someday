@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
-import { storeProductImage, upgradedImageUrl } from "./images"
+import { restoreOriginalProductImage, storeProductImage, upgradedImageUrl } from "./images"
 
 describe("upgradedImageUrl", () => {
   it("asks CDNs for a large render", () => {
@@ -21,9 +21,13 @@ describe("upgradedImageUrl", () => {
 // Exercise the real pipeline without invoking the remote segmentation model.
 // A transparent source must reach storage without ever requesting segmentation.
 
-it.each([true, false])(
-  "chooses the right image pipeline for transparency=%s",
-  async (transparent) => {
+it.each([
+  { transparent: true, restore: false },
+  { transparent: false, restore: false },
+  { transparent: false, restore: true },
+])(
+  "chooses the right image pipeline for %j",
+  async ({ transparent, restore }) => {
     const transforms: ImageTransform[] = []
     const sample = new Uint8Array(64 * 64 * 4)
     for (let y = 0; y < 64; y++) {
@@ -61,7 +65,11 @@ it.each([true, false])(
       text: () => transformer,
       hosted: env.IMAGES.hosted,
     }
-    const result = await storeProductImage(
+    const originalKey = `products/${crypto.randomUUID()}/original`
+    if (restore) await env.IMAGE_BUCKET.put(originalKey, "source")
+    const result = restore ? await restoreOriginalProductImage(
+      originalKey.split("/")[1]!, env.IMAGE_BUCKET, images,
+    ) : await storeProductImage(
       new Blob(["source"]),
       env.IMAGE_BUCKET,
       images,
@@ -69,8 +77,16 @@ it.each([true, false])(
 
     expect(
       transforms.some((transform) => transform.segment === "foreground"),
-    ).toBe(!transparent)
-    expect(result.backgroundRemoved).toBe(!transparent)
+    ).toBe(!transparent && !restore)
+    expect(result.backgroundRemoved).toBe(!transparent && !restore)
+    if (restore) {
+      expect(result.subjectScale).toBe(1)
+      expect(transforms).toHaveLength(3)
+      expect(transforms.every(({ fit, background }) => fit === "pad" && background === "rgba(0,0,0,0)")).toBe(true)
+      expect(`products/${result.processedImageKey}/original`).not.toBe(originalKey)
+      expect(await (await env.IMAGE_BUCKET.get(`products/${result.processedImageKey}/original`))?.text()).toBe("source")
+      expect(await env.IMAGE_BUCKET.head(originalKey)).not.toBeNull()
+    }
     for (const width of [360, 720, 1080]) {
       expect(
         await env.IMAGE_BUCKET.head(
@@ -80,3 +96,8 @@ it.each([true, false])(
     }
   },
 )
+
+it("does not replace an image when its saved original is missing", async () => {
+  await expect(restoreOriginalProductImage("missing", env.IMAGE_BUCKET, env.IMAGES))
+    .rejects.toThrow("The original image is no longer available.")
+})

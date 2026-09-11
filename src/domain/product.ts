@@ -39,6 +39,10 @@ export interface ProductUpdates {
   name?: string
   brand?: string
   category?: Category
+  processedImageKey?: string
+  backgroundRemoved?: boolean
+  subjectScale?: number
+  subjectPosition?: SubjectPosition
 }
 
 export function isCategory(value: string | null): value is Category {

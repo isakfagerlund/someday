@@ -170,8 +170,8 @@ function renderOriginalVariant(
     .input(source.stream())
     .transform({
       ...variant,
-      fit: "cover",
-      gravity: "auto",
+      fit: "pad",
+      background: "rgba(0,0,0,0)",
       sharpen: 1,
     })
     .output({ format: "image/webp", quality: variantQuality })
@@ -197,15 +197,18 @@ async function renderVariants(source: Blob, images: ImagesBinding) {
       }),
     )
 
-    const variants = await Promise.all(
-      productImageVariants.map(async (variant) => ({
-        width: variant.width,
-        result: await renderOriginalVariant(source, images, variant),
-      })),
-    )
-
-    return { backgroundRemoved: false, variants }
+    return renderOriginalVariants(source, images)
   }
+}
+
+async function renderOriginalVariants(source: Blob, images: ImagesBinding) {
+  const variants = await Promise.all(
+    productImageVariants.map(async (variant) => ({
+      width: variant.width,
+      result: await renderOriginalVariant(source, images, variant),
+    })),
+  )
+  return { backgroundRemoved: false, variants }
 }
 
 async function readImage(response: Response) {
@@ -298,8 +301,30 @@ export async function storeProductImage(
     typeof image === "string"
       ? await fetchSourceImage(image, fetcher)
       : { contentType: image.type || undefined, source: image }
+  return storeRenderedImage(source, bucket, await renderVariants(source, images), sourceContentType)
+}
+
+export async function restoreOriginalProductImage(
+  imageKey: string,
+  bucket: R2Bucket,
+  images: ImagesBinding,
+) {
+  const original = await bucket.get(originalKey(imageKey))
+  if (!original) throw new ProductImageError("The original image is no longer available.")
+  const source = new Blob([await original.arrayBuffer()], {
+    type: original.httpMetadata?.contentType,
+  })
+  return storeRenderedImage(source, bucket, await renderOriginalVariants(source, images), source.type, 1)
+}
+
+async function storeRenderedImage(
+  source: Blob,
+  bucket: R2Bucket,
+  { backgroundRemoved, variants }: Awaited<ReturnType<typeof renderVariants>>,
+  sourceContentType?: string,
+  scale = subjectScale,
+) {
   const imageKey = crypto.randomUUID()
-  const { backgroundRemoved, variants } = await renderVariants(source, images)
 
   const writes = await Promise.allSettled([
     bucket.put(originalKey(imageKey), source, {
@@ -326,7 +351,7 @@ export async function storeProductImage(
   return {
     processedImageKey: imageKey,
     backgroundRemoved,
-    subjectScale,
+    subjectScale: scale,
     subjectPosition: { ...subjectPosition },
   } satisfies StoredProductImage
 }

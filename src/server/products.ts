@@ -6,7 +6,7 @@ import { purgeBoardCache } from "../catalog-cache"
 import { getProductBoard } from "../db/boards"
 import * as db from "../db/products"
 import { categories, productStatuses } from "../domain/product"
-import { deleteProductImage } from "../images"
+import { deleteProductImage, restoreOriginalProductImage, type StoredProductImage } from "../images"
 import {
   createProduct as importProduct,
   DuplicateProductError,
@@ -85,14 +85,28 @@ export const updateProduct = createServerFn({ method: "POST" })
       name: z.string().trim().min(1),
       brand: z.string().trim().min(1),
       category: z.enum(categories),
+      useOriginalImage: z.boolean().optional(),
     }),
   )
-  .handler(async ({ data: { id, ...updates }, context }) => {
+  .handler(async ({ data: { id, useOriginalImage, ...updates }, context }) => {
     const boardId = await requireProductOwnership(id)
-    const product = await db.updateProduct(env.DB, id, boardId, updates)
+    let image: StoredProductImage | undefined
+    if (useOriginalImage) {
+      const current = await db.getProduct(env.DB, id, boardId)
+      if (!current) throw new Error("Product not found")
+      image = await restoreOriginalProductImage(current.processedImageKey, env.IMAGE_BUCKET, env.IMAGES)
+    }
 
-    if (!product) throw new Error("Product not found")
+    let product
+    try {
+      product = await db.updateProduct(env.DB, id, boardId, { ...updates, ...image })
+      if (!product) throw new Error("Product not found")
+    } catch (error) {
+      if (image) await deleteProductImage(env.IMAGE_BUCKET, image.processedImageKey).catch(console.error)
+      throw error
+    }
 
+    // Keep previous image URLs valid for visitors with an already-loaded board.
     await purgeBoardCache(context.ctx, boardId)
 
     return product

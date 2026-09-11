@@ -22,7 +22,7 @@ vi.mock("@tanstack/react-start", () => ({
 
 import { getProductByUrl, insertProduct, listProducts, setProductStatus as setStatusInDb } from "../db/products"
 import { loadBoard } from "./pages"
-import { setProductStatus } from "./products"
+import { setProductStatus, updateProduct } from "./products"
 
 const productId = "c49db3b2-4a04-4d2e-9e2f-a171a43232e1"
 const sourceUrl = "https://example.com/legacy-product"
@@ -47,6 +47,26 @@ beforeEach(async () => {
   mocks.purge.mockClear()
   await env.DB.prepare("DELETE FROM products WHERE id != ?").bind(productId).run()
   await env.DB.prepare("UPDATE products SET status = 'wishlist', owned_at = NULL WHERE id = ?").bind(productId).run()
+})
+
+describe("restoring product images", () => {
+  const data = {
+    id: productId, name: "Changed", brand: "Brand", category: "Home" as const,
+    useOriginalImage: true,
+  }
+
+  it.each([null, "another-owner"])("rejects restoration by viewer %s", async (viewer) => {
+    mocks.viewerId.mockResolvedValue(viewer)
+    await expect(updateProduct({ data })).rejects.toThrow("You do not own this board")
+    expect(mocks.purge).not.toHaveBeenCalled()
+  })
+
+  it("keeps the product unchanged when the original is unavailable", async () => {
+    const before = await getProductByUrl(env.DB, "default", sourceUrl)
+    await expect(updateProduct({ data })).rejects.toThrow("The original image is no longer available.")
+    expect(await getProductByUrl(env.DB, "default", sourceUrl)).toEqual(before)
+    expect(mocks.purge).not.toHaveBeenCalled()
+  })
 })
 
 describe("product status", () => {
