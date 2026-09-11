@@ -56,7 +56,7 @@ export default function OwnerBoard({
   )
 
   async function revealProduct(product: CatalogProduct) {
-    await router.invalidate()
+    await router.invalidate({ sync: true })
     await router.navigate({
       to: "/$boardSlug",
       params: { boardSlug: board.slug },
@@ -103,7 +103,7 @@ export default function OwnerBoard({
         const focusTarget = next || activeView
         focusTarget?.focus({ preventScroll: true })
       })
-      await router.invalidate()
+      await router.invalidate({ sync: true })
     } catch (caught) {
       setError(saved ? "Saved, but the board could not refresh. Reload to try again." : errorMessage(caught, "The product could not be moved. Try again."))
     } finally {

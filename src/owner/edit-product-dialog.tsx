@@ -1,6 +1,7 @@
 import { AlertDialog } from "@base-ui/react/alert-dialog"
 import { Dialog } from "@base-ui/react/dialog"
 import { Select } from "@base-ui/react/select"
+import { useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 
 import { categories, type CatalogProduct, type Category } from "../domain/product"
@@ -28,14 +29,15 @@ export function EditProductDialog({ product, open, onOpenChange, triggerRef }: {
       <Dialog.Portal>
         <Dialog.Backdrop className={backdropClass} />
         <Dialog.Popup className={`${popupClass} w-[min(100%-2rem,30rem)]`} finalFocus={triggerRef}>
-          {open && <EditProductForm product={product} />}
+          {open && <EditProductForm product={product} onSaved={() => onOpenChange(false)} />}
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
   )
 }
 
-function EditProductForm({ product }: { product: CatalogProduct }) {
+function EditProductForm({ product, onSaved }: { product: CatalogProduct; onSaved: () => void }) {
+  const router = useRouter()
   const [category, setCategory] = useState<Category>(product.category)
   const [error, setError] = useState<string | null>(null)
 
@@ -54,7 +56,8 @@ function EditProductForm({ product }: { product: CatalogProduct }) {
           category,
         },
       })
-      location.reload()
+      await router.invalidate({ sync: true })
+      onSaved()
     } catch (caught) {
       setError(errorMessage(caught, "The product could not be saved."))
     }
@@ -65,7 +68,8 @@ function EditProductForm({ product }: { product: CatalogProduct }) {
 
     try {
       await deleteProduct({ data: { id: product.id } })
-      location.reload()
+      await router.invalidate({ sync: true })
+      onSaved()
     } catch (caught) {
       setError(errorMessage(caught, "The product could not be deleted."))
     }
