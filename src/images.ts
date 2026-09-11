@@ -62,6 +62,12 @@ function transparentCanvas() {
 export function upgradedImageUrl(imageUrl: string) {
   const url = new URL(imageUrl)
 
+  // Herman Miller's original assets can exceed the Images pixel limit.
+  // Its Imgix CDN accepts a width even when the source URL has no size hints.
+  if (url.hostname === "images.hermanmiller.group") {
+    url.searchParams.set("w", String(preferredSourceWidth))
+  }
+
   for (const parameter of ["w", "width", "imwidth", "sw"]) {
     if (url.searchParams.has(parameter)) {
       url.searchParams.set(parameter, String(preferredSourceWidth))
@@ -190,7 +196,7 @@ async function renderVariants(source: Blob, images: ImagesBinding) {
 
     return { backgroundRemoved, variants }
   } catch (error) {
-    console.error(
+    console.warn(
       JSON.stringify({
         message: "product background removal failed; using original image",
         error: error instanceof Error ? error.message : String(error),

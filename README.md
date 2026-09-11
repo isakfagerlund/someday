@@ -6,9 +6,11 @@ A small server-rendered product catalog on Cloudflare Workers.
 
 ```sh
 pnpm install
-pnpm run db:migrate:local
 pnpm run dev
 ```
+
+`pnpm dev` applies pending migrations to this worktree's local database before
+starting Vite, including when the database is empty.
 
 Local development uses these values in `.dev.vars`:
 
@@ -20,6 +22,10 @@ CLERK_JWT_KEY="-----BEGIN PUBLIC KEY-----
 paste-the-base64-body-here
 -----END PUBLIC KEY-----"
 ```
+
+Use the publishable, secret, and JWT keys from the same Clerk development
+instance. After switching Clerk instances, clear the localhost cookies and
+sign in again. Each new worktree needs its own `.dev.vars`.
 
 If you want to keep the seeded board, replace its owner placeholder with the
 Clerk user ID that owns it:
@@ -81,7 +87,10 @@ Later Wrangler deployments preserve the existing Worker secrets.
 
 Sentry reports browser errors, router error-boundary failures, server request and
 function errors, and server `console.error` calls to `irewardhealth/someday`.
-The server uses `@sentry/cloudflare` because it runs on Workers.
+The server uses `@sentry/cloudflare` because it runs on Workers. Reporting is
+enabled only in production builds; local errors remain visible in the console.
+Expected page-access and background-removal fallbacks log warnings. Failed
+image imports still report errors.
 
 Set the GitHub Actions secret `SENTRY_AUTH_TOKEN` to enable source-map uploads.
 Error reporting works without it, but stack traces may show bundled code.

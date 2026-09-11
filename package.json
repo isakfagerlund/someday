@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@11.10.0",
   "scripts": {
-    "dev": "pnpm run build:extension && vite dev",
+    "dev": "pnpm run db:migrate:local && pnpm run build:extension && vite dev",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
     "db:check": "drizzle-kit check",

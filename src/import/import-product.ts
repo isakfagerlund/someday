@@ -163,7 +163,7 @@ export async function previewProduct(
   try {
     collected = await collectProductEvidence(sourceUrl, env.BROWSER)
   } catch (pageError) {
-    console.error(
+    console.warn(
       JSON.stringify({
         message: "product page import failed; trying web search",
         sourceUrl,
