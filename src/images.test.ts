@@ -16,6 +16,11 @@ describe("upgradedImageUrl", () => {
     expect(upgradedImageUrl("https://example.com/photo.jpg")).toBeNull()
     expect(upgradedImageUrl("https://example.com/logo_2x.png")).toBeNull()
   })
+
+  it("resizes Herman Miller originals before downloading them", () => {
+    const imageUrl = "https://images.hermanmiller.group/asset/e6433c76-c07c-4065-a407-6ec11f04aba5/W/HM_AER_2195348_100249204_black_polished_a.png"
+    expect(upgradedImageUrl(imageUrl)).toBe(`${imageUrl}?w=2000`)
+  })
 })
 
 // Exercise the real pipeline without invoking the remote segmentation model.
