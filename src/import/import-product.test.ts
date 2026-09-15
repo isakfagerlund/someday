@@ -34,6 +34,7 @@ describe("previewProduct", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.spyOn(console, "error").mockImplementation(() => undefined)
+    vi.spyOn(console, "warn").mockImplementation(() => undefined)
   })
 
   it("uses web search when the retailer blocks both page readers", async () => {
