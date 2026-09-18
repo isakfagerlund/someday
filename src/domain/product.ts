@@ -21,6 +21,8 @@ export interface CatalogProduct {
   name: string
   brand: string
   category: Category
+  color: string | null
+  size: string | null
   status: ProductStatus
   ownedAt: Date | null
   originalImageUrl: string
@@ -39,10 +41,20 @@ export interface ProductUpdates {
   name?: string
   brand?: string
   category?: Category
+  color?: string | null
+  size?: string | null
   processedImageKey?: string
   backgroundRemoved?: boolean
   subjectScale?: number
   subjectPosition?: SubjectPosition
+}
+
+/** The color and size line shown under a product name, empty when neither is known. */
+export function productDetails({ color, size }: Pick<CatalogProduct, "color" | "size">) {
+  // A bare "8" means nothing to whoever the board is shared with.
+  const label = size && (/size/i.test(size) ? size : `Size ${size}`)
+
+  return [color, label].filter(Boolean).join(" · ")
 }
 
 export function isCategory(value: string | null): value is Category {

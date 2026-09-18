@@ -15,6 +15,8 @@ const catalogProductColumns = {
   name: products.name,
   brand: products.brand,
   category: products.category,
+  color: products.color,
+  size: products.size,
   status: products.status,
   ownedAt: products.ownedAt,
   originalImageUrl: products.originalImageUrl,

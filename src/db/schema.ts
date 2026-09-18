@@ -39,6 +39,8 @@ export const products = sqliteTable(
     name: text("name").notNull(),
     brand: text("brand").notNull(),
     category: text("category", { enum: categories }).notNull(),
+    color: text("color"),
+    size: text("size"),
     status: text("status", { enum: productStatuses }).notNull().default("wishlist"),
     ownedAt: integer("owned_at", { mode: "timestamp_ms" }),
     originalImageUrl: text("original_image_url").notNull().default(""),

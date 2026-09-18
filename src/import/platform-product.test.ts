@@ -34,6 +34,43 @@ describe("fetchPlatformEvidence", () => {
     })
   })
 
+  it("reads the pinned Shopify variant as the color and size evidence", async () => {
+    const product = {
+      title: "Boat-neck lace mini dress",
+      vendor: "COS",
+      product_type: "Dresses",
+      options: [
+        { name: "Color", values: ["Light Blue", "Black"] },
+        { name: "Size", values: ["S", "M", "L"] },
+      ],
+      variants: [
+        { id: 1, title: "Light Blue / S" },
+        { id: 2, title: "Light Blue / M" },
+      ],
+      images: [{ src: "https://cos.example/dress.jpg" }],
+    }
+    const fetcher = vi.fn(async () => Response.json({ product }))
+
+    await expect(
+      fetchPlatformEvidence(
+        new URL("https://cos.example/products/lace-mini-dress?variant=2"),
+        fetcher,
+      ),
+    ).resolves.toMatchObject({
+      text: "Dresses. Selected variant: Light Blue / M",
+    })
+
+    // Without a pinned variant the shop's own options are the best evidence.
+    await expect(
+      fetchPlatformEvidence(
+        new URL("https://cos.example/products/lace-mini-dress"),
+        fetcher,
+      ),
+    ).resolves.toMatchObject({
+      text: "Dresses. Color: Light Blue, Black. Size: S, M, L",
+    })
+  })
+
   it("skips URLs without a recognizable platform path", async () => {
     const fetcher = vi.fn()
 

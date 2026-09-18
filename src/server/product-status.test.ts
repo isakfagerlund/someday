@@ -74,7 +74,8 @@ describe("product status", () => {
     expect(migratedProduct).toEqual({ status: "wishlist", owned_at: null, image_key: "legacy-image" })
     const product = await insertProduct(env.DB, "default", {
       id: crypto.randomUUID(), sourceUrl: "https://example.com/new", canonicalUrl: "https://example.com/new",
-      name: "New", brand: "Brand", category: "Tech", originalImageUrl: "", processedImageKey: "new-image",
+      name: "New", brand: "Brand", category: "Tech", color: null, size: null,
+      originalImageUrl: "", processedImageKey: "new-image",
       backgroundRemoved: false, subjectScale: 0.8, subjectPosition: { x: 0.5, y: 0.5 }, importEvidence: {},
     })
     expect(product).toMatchObject({ status: "wishlist", ownedAt: null })

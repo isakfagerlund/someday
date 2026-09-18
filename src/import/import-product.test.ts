@@ -55,6 +55,22 @@ describe("previewProduct", () => {
     })
   })
 
+  it("prefers the size pinned in the saved link over the one the model reported", async () => {
+    mocks.collectProductEvidence.mockRejectedValue(new Error("HTTP 403"))
+    mocks.searchProduct.mockResolvedValue({
+      name: "Boat-neck lace mini dress",
+      brand: "COS",
+      category: "Clothing",
+      color: "Light blue",
+      size: "S",
+      imageUrls: ["https://media.cos.com/dress-front.jpg"],
+    })
+
+    await expect(
+      previewProduct(`${sourceUrl}?size=M`, { OPENAI_API_KEY: "test" } as Env),
+    ).resolves.toMatchObject({ color: "Light blue", size: "M" })
+  })
+
   it("returns a fallback without publishing a text-only product", async () => {
     mocks.collectProductEvidence.mockRejectedValue(new Error("HTTP 403"))
     mocks.searchProduct.mockRejectedValue(new Error("No result"))
@@ -115,7 +131,7 @@ describe("createProduct", () => {
     mocks.getProductByUrl.mockResolvedValue(product)
     await expect(createProduct({
       sourceUrl, canonicalUrl: sourceUrl, name: "Dress", brand: "COS", category: "Clothing",
-      imageUrl: "https://media.cos.com/dress-front.jpg", method: "search",
+      color: null, size: null, imageUrl: "https://media.cos.com/dress-front.jpg", method: "search",
     }, "default", {} as Env)).rejects.toMatchObject({ name: "DuplicateProductError", product })
     expect(mocks.storeProductImage).not.toHaveBeenCalled()
     expect(mocks.insertProduct).not.toHaveBeenCalled()
@@ -140,6 +156,8 @@ describe("createProduct", () => {
           name: "Boat-neck lace mini dress",
           brand: "COS",
           category: "Clothing",
+          color: "Black",
+          size: "M",
           imageUrl: "https://media.cos.com/dress-front.jpg",
           method: "search",
         },

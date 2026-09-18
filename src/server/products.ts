@@ -16,6 +16,14 @@ import { getViewerId, requireOwnedBoard } from "./viewer"
 
 const productIdInput = z.object({ id: z.uuid() })
 
+// Blank means the shop never stated it, or the curator cleared it.
+const productDetail = z
+  .string()
+  .trim()
+  .max(80)
+  .default("")
+  .transform((value) => value || null)
+
 export const maxUploadBytes = 20_000_000
 
 const createProductFields = z.object({
@@ -25,6 +33,8 @@ const createProductFields = z.object({
   name: z.string().trim().min(1).max(300),
   brand: z.string().trim().min(1).max(150),
   category: z.enum(categories),
+  color: productDetail,
+  size: productDetail,
   imageUrl: z.string().trim(),
   method: z.enum(["direct", "fallback", "platform", "rendered", "search"]),
 })
@@ -85,6 +95,8 @@ export const updateProduct = createServerFn({ method: "POST" })
       name: z.string().trim().min(1),
       brand: z.string().trim().min(1),
       category: z.enum(categories),
+      color: productDetail,
+      size: productDetail,
       useOriginalImage: z.boolean().optional(),
     }),
   )

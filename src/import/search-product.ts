@@ -10,6 +10,8 @@ const searchResultSchema = z
     name: z.string().trim().min(1),
     brand: z.string().trim().min(1),
     category: z.enum(categories),
+    color: z.string().trim().nullable(),
+    size: z.string().trim().nullable(),
     imageUrls: z.array(z.string()).max(12),
   })
   .strict()
@@ -18,6 +20,8 @@ const instructions = `Find the exact purchasable product at the supplied retaile
 
 Use the full URL, retailer domain, product slug, and product identifier to avoid similarly named products.
 Return only details for that exact product.
+Return the color and size only when the retailer states them for that exact product; otherwise return null.
+Return a size only when the product is sold in a single size, and never list the sizes a shop offers.
 Return direct, public image file URLs for the product itself, ordered with the best catalog image first.
 Exclude logos, icons, placeholders, related products, and product page URLs.
 Do not invent details or URLs.`
@@ -64,5 +68,10 @@ export async function searchProduct(openai: OpenAI, sourceUrl: string) {
     }
   })
 
-  return { ...response.output_parsed, imageUrls: [...new Set(imageUrls)] }
+  return {
+    ...response.output_parsed,
+    color: response.output_parsed.color || null,
+    size: response.output_parsed.size || null,
+    imageUrls: [...new Set(imageUrls)],
+  }
 }
