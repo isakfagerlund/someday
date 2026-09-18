@@ -14,6 +14,7 @@ import type {
 } from "./product-evidence"
 import { productFallbackFromUrl } from "./product-fallback"
 import { validateProductUrl } from "./product-url"
+import { variantFromUrl } from "./product-variant"
 import { searchProduct } from "./search-product"
 
 export type ProductImportMethod =
@@ -29,6 +30,8 @@ export interface ProductImportPreview {
   name: string
   brand: string
   category: Category
+  color: string | null
+  size: string | null
   imageUrls: string[]
   recommendedImageUrl: string
   method: ProductImportMethod
@@ -41,6 +44,8 @@ export interface ProductImportConfirmation {
   name: string
   brand: string
   category: Category
+  color: string | null
+  size: string | null
   /** Empty when the user uploaded the image instead of picking a link. */
   imageUrl: string
   imageFile?: Blob
@@ -140,6 +145,8 @@ async function searchPreview(
     name: result.name,
     brand: result.brand,
     category: result.category,
+    color: result.color,
+    size: result.size,
     imageUrls: result.imageUrls,
     recommendedImageUrl: result.imageUrls[0] ?? "",
     method: "search",
@@ -150,11 +157,32 @@ async function searchPreview(
   }
 }
 
+/**
+ * A shared wishlist link has to lead to the size it promises, so a size pinned
+ * in the URL replaces whatever the page or the model reported.
+ */
 export async function previewProduct(
   input: string,
   env: Env,
 ): Promise<ProductImportPreview> {
-  const sourceUrl = validateProductUrl(input).href
+  const pageUrl = validateProductUrl(input)
+  const [preview, variant] = await Promise.all([
+    readProductPreview(pageUrl, env),
+    variantFromUrl(pageUrl),
+  ])
+
+  return {
+    ...preview,
+    color: variant.color ?? preview.color,
+    size: variant.size ?? preview.size,
+  }
+}
+
+async function readProductPreview(
+  pageUrl: URL,
+  env: Env,
+): Promise<ProductImportPreview> {
+  const sourceUrl = pageUrl.href
   const fallback = productFallbackFromUrl(sourceUrl)
   const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY })
 
@@ -299,6 +327,8 @@ export async function createProduct(
       name: confirmation.name,
       brand: confirmation.brand,
       category: confirmation.category,
+      color: confirmation.color,
+      size: confirmation.size,
       originalImageUrl: imageUrl,
       ...image,
       importEvidence: {

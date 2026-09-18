@@ -35,6 +35,8 @@ it("migrates existing data and lists only the owner's boards with their own prod
     backgroundRemoved: false,
     subjectScale: 0.8,
     subjectPosition: { x: 0.5, y: 0.5 },
+    color: null,
+    size: null,
     importEvidence: "{}",
   }
   // Seed the historical schema directly; the current helper includes newer columns.

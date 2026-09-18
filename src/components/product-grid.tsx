@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from "react"
 
-import type { CatalogProduct } from "../domain/product"
+import { productDetails, type CatalogProduct } from "../domain/product"
 
 interface ProductGridProps {
   addedProductId?: string
@@ -93,6 +93,7 @@ function ProductCard({
   priority: boolean
 }) {
   const owned = product.status === "owned"
+  const details = productDetails(product)
   const imageUrl = product.processedImageKey
     ? `/images/${encodeURIComponent(product.processedImageKey)}`
     : null
@@ -131,6 +132,7 @@ function ProductCard({
         <h2 className="text-base font-medium tracking-[-0.015em]">
           {product.name}
         </h2>
+        {details && <span className="text-sm text-muted">{details}</span>}
       </span>
     </a>
   )

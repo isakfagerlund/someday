@@ -12,6 +12,8 @@ export const productCandidateSchema = z
     brand: z.string().trim().min(1),
     canonicalUrl: z.string(),
     category: z.enum(categories),
+    color: z.string().trim().nullable(),
+    size: z.string().trim().nullable(),
     imageUrl: z.string(),
   })
   .strict()
@@ -44,7 +46,12 @@ export function validateProductCandidate(
     )
   }
 
-  return { ...candidate, canonicalUrl }
+  return {
+    ...candidate,
+    canonicalUrl,
+    color: candidate.color || null,
+    size: candidate.size || null,
+  }
 }
 
 const instructions = `Extract one purchasable product from retailer page evidence.
@@ -54,6 +61,10 @@ Do not invent product details. Prefer explicit JSON-LD and Open Graph values ove
 Use the canonical URL when supplied; otherwise use the page URL.
 Choose the image URL exactly from the supplied image candidates.
 When the same product image is available at several declared widths, choose the largest one.
+Take the color and size from details stated for this exact product, and use null when the page states neither.
+The color is the colorway of this page, such as "Off White"; ignore colorways of other variants.
+The size is the one size this item is sold in, such as a one-size item or a fixed measurement.
+Use null for the size when the page offers a choice of sizes, and never list the sizes on offer.
 Choose exactly one category:
 - Clothing: garments and footwear
 - Accessories: bags, jewelry, watches, eyewear, and wearable accessories

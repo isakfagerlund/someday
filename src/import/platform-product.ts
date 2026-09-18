@@ -19,9 +19,31 @@ const shopifyProductSchema = z.object({
     title: z.string(),
     vendor: z.string().nullish(),
     product_type: z.string().nullish(),
+    options: z
+      .array(z.object({ name: z.string(), values: z.array(z.string()) }))
+      .nullish(),
+    variants: z
+      .array(
+        z.object({
+          id: z.number(),
+          title: z.string(),
+          option1: z.string().nullish(),
+          option2: z.string().nullish(),
+          option3: z.string().nullish(),
+        }),
+      )
+      .nullish(),
     images: z.array(imageSchema),
   }),
 })
+
+type ShopifyProduct = z.infer<typeof shopifyProductSchema>["product"]
+
+const shopifyPath = /^(.*)\/products\/([^/]+?)\/?$/
+
+function shopifyEndpoint(pageUrl: URL, base: string, slug: string) {
+  return new URL(`${base}/products/${slug}.json`, pageUrl)
+}
 
 const wooCommerceProductsSchema = z.array(
   z.object({
@@ -45,21 +67,26 @@ interface Platform {
   /** Captures the path before the product segment and the product slug. */
   pathPattern: RegExp
   endpoint: (pageUrl: URL, base: string, slug: string) => URL
-  product: (json: unknown) => PlatformProduct | null
+  product: (json: unknown, pageUrl: URL) => PlatformProduct | null
 }
 
 const platforms: Platform[] = [
   {
-    pathPattern: /^(.*)\/products\/([^/]+?)\/?$/,
-    endpoint: (pageUrl, base, slug) =>
-      new URL(`${base}/products/${slug}.json`, pageUrl),
-    product(json) {
+    pathPattern: shopifyPath,
+    endpoint: shopifyEndpoint,
+    product(json, pageUrl) {
       const parsed = shopifyProductSchema.safeParse(json)
       if (!parsed.success) return null
 
       const { title, vendor, product_type, images } = parsed.data.product
+      const details = shopifyVariantText(parsed.data.product, pageUrl)
 
-      return { name: title, brand: vendor, text: product_type, images }
+      return {
+        name: title,
+        brand: vendor,
+        text: [product_type, ...details].filter(Boolean).join(". "),
+        images,
+      }
     },
   },
   {
@@ -85,6 +112,75 @@ const platforms: Platform[] = [
     },
   },
 ]
+
+/** Colors and sizes live in the variants; a pinned ?variant= names the exact one. */
+function shopifyVariantText(product: ShopifyProduct, pageUrl: URL) {
+  const variantId = pageUrl.searchParams.get("variant")
+  const selected = product.variants?.find(
+    (variant) => String(variant.id) === variantId,
+  )
+
+  if (selected) return [`Selected variant: ${selected.title}`]
+
+  return (product.options ?? []).map(
+    (option) => `${option.name}: ${option.values.join(", ")}`,
+  )
+}
+
+const colorOption = /^(?:colou?rs?|colorway|farbe|couleur|f\u00e4rg)$/i
+const sizeOption = /^(?:sizes?|gr\u00f6\u00dfe|gr\u00f6sse|taille|talla|storlek)$/i
+
+function variantOption(
+  product: ShopifyProduct,
+  variant: NonNullable<ShopifyProduct["variants"]>[number],
+  names: RegExp,
+) {
+  const index = (product.options ?? []).findIndex((option) =>
+    names.test(option.name.trim()),
+  )
+  const values = [variant.option1, variant.option2, variant.option3]
+
+  return (index === -1 ? null : values[index]?.trim()) || null
+}
+
+/**
+ * Resolves a pinned ?variant= against the shop's own variant table, which is the
+ * only place that says which size the saved link points at.
+ */
+export async function fetchShopifyVariant(
+  pageUrl: URL,
+  fetcher: ProductFetcher = fetch,
+) {
+  const variantId = pageUrl.searchParams.get("variant")
+  const match = shopifyPath.exec(pageUrl.pathname)
+
+  if (!variantId || !match) return null
+
+  const [, base = "", slug = ""] = match
+
+  try {
+    const { response } = await fetchPublicResource(
+      shopifyEndpoint(pageUrl, base, slug),
+      { accept: "application/json" },
+      fetcher,
+    )
+    const product = shopifyProductSchema.safeParse(await readJson(response)).data
+      ?.product
+    const variant = product?.variants?.find(
+      (candidate) => String(candidate.id) === variantId,
+    )
+
+    if (!product || !variant) return null
+
+    return {
+      color: variantOption(product, variant, colorOption),
+      size: variantOption(product, variant, sizeOption),
+    }
+  } catch {
+    // A shop that hides its product JSON simply leaves the size unknown.
+    return null
+  }
+}
 
 function publicUrl(value: string, baseUrl: URL) {
   try {
@@ -161,7 +257,7 @@ export async function fetchPlatformEvidence(
         { accept: "application/json" },
         fetcher,
       )
-      const product = platform.product(await readJson(response))
+      const product = platform.product(await readJson(response), pageUrl)
 
       if (product) return toEvidence(pageUrl, product)
     } catch {

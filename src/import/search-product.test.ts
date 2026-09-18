@@ -35,6 +35,8 @@ describe("searchProduct", () => {
         name: "Boat-neck lace mini dress",
         brand: "COS",
         category: "Clothing",
+        color: "Light blue",
+        size: "M",
         imageUrls: [
           "https://images.example.com/dress.jpg",
           "https://images.example.com/dress.jpg",
@@ -53,6 +55,8 @@ describe("searchProduct", () => {
       name: "Boat-neck lace mini dress",
       brand: "COS",
       category: "Clothing",
+      color: "Light blue",
+      size: "M",
       imageUrls: ["https://images.example.com/dress.jpg"],
     })
 
@@ -81,6 +85,8 @@ describe("searchProduct", () => {
         name: "Era 100",
         brand: "Sonos",
         category: "Tech",
+        color: null,
+        size: null,
         imageUrls: ["data:image/png;base64,nope"],
       }),
     )
@@ -92,6 +98,8 @@ describe("searchProduct", () => {
       name: "Era 100",
       brand: "Sonos",
       category: "Tech",
+      color: null,
+      size: null,
       imageUrls: [],
     })
   })

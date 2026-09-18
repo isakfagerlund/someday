@@ -36,5 +36,7 @@ export function productFallbackFromUrl(sourceUrl: string) {
     name: name || `Product from ${brand}`,
     brand,
     category: categoryFromPath(url.pathname.toLowerCase()),
+    color: null,
+    size: null,
   }
 }

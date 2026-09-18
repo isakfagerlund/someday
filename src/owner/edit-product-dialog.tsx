@@ -57,6 +57,8 @@ function EditProductForm({ product, onSaved }: { product: CatalogProduct; onSave
           name: String(form.get("name")),
           brand: String(form.get("brand")),
           category,
+          color: String(form.get("color")),
+          size: String(form.get("size")),
           useOriginalImage: form.get("useOriginalImage") === "on",
         },
       })
@@ -104,6 +106,26 @@ function EditProductForm({ product, onSaved }: { product: CatalogProduct; onSave
         name="brand"
         defaultValue={product.brand}
         required
+      />
+      <label className={labelClass} htmlFor="edit-product-color">
+        Color
+      </label>
+      <input
+        className={inputClass}
+        id="edit-product-color"
+        name="color"
+        defaultValue={product.color ?? ""}
+        placeholder="Off White"
+      />
+      <label className={labelClass} htmlFor="edit-product-size">
+        Size
+      </label>
+      <input
+        className={inputClass}
+        id="edit-product-size"
+        name="size"
+        defaultValue={product.size ?? ""}
+        placeholder="M"
       />
       <label className={labelClass} id="edit-product-category-label">
         Category

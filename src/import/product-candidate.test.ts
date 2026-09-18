@@ -52,6 +52,8 @@ describe("extractProductCandidate", () => {
       brand: "Hay",
       canonicalUrl: "https://shop.example.com/products/pleated-lamp",
       category: "Other",
+      color: null,
+      size: null,
       imageUrl: "https://shop.example.com/images/pleated-lamp.jpg",
     }
     const fetcher = vi.fn().mockResolvedValue(
@@ -84,7 +86,15 @@ describe("extractProductCandidate", () => {
     })
     expect(request.text.format.schema).toMatchObject({
       additionalProperties: false,
-      required: ["name", "brand", "canonicalUrl", "category", "imageUrl"],
+      required: [
+        "name",
+        "brand",
+        "canonicalUrl",
+        "category",
+        "color",
+        "size",
+        "imageUrl",
+      ],
     })
   })
 
@@ -106,6 +116,8 @@ describe("validateProductCandidate", () => {
     brand: "Hay",
     canonicalUrl: "https://shop.example.com/products/pleated-lamp",
     category: "Other" as const,
+    color: null,
+    size: null,
     imageUrl: "https://shop.example.com/images/pleated-lamp.jpg",
   }
 

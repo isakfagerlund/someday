@@ -14,6 +14,8 @@ describe("productFallbackFromUrl", () => {
       name: "Boat Neck Lace Mini Dress Light Blue",
       brand: "COS",
       category: "Clothing",
+      color: null,
+      size: null,
     })
   })
 })

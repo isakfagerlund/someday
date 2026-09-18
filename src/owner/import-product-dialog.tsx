@@ -8,7 +8,7 @@ import {
   PlusIcon,
   UploadIcon,
 } from "../components/icons"
-import type { CatalogProduct } from "../domain/product"
+import { productDetails, type CatalogProduct } from "../domain/product"
 import type { ProductImportPreview } from "../import/import-product"
 import {
   createProduct,
@@ -196,6 +196,8 @@ function ImportProductForm({
         name: preview.name,
         brand: preview.brand,
         category: preview.category,
+        color: preview.color ?? "",
+        size: preview.size ?? "",
         imageUrl: preparedImage ? "" : imageUrl.trim(),
         method: preview.method,
       }
@@ -309,6 +311,9 @@ function ImportProductForm({
                     {preview.brand}
                   </p>
                   <p className="mt-1 font-medium">{preview.name}</p>
+                  {productDetails(preview) && (
+                    <p className="mt-1 text-sm text-muted">{productDetails(preview)}</p>
+                  )}
                 </div>
                 <ImagePicker
                   imageUrls={preview.imageUrls}
