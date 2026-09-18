@@ -49,7 +49,7 @@ export interface ProductUpdates {
   subjectPosition?: SubjectPosition
 }
 
-/** The color and size line shown under a product name, empty when neither is known. */
+/** The color and size line shown in the import preview, empty when neither is known. */
 export function productDetails({ color, size }: Pick<CatalogProduct, "color" | "size">) {
   // A bare "8" means nothing to whoever the board is shared with.
   const label = size && (/size/i.test(size) ? size : `Size ${size}`)
