@@ -1,8 +1,8 @@
-import { notFound } from "@tanstack/react-router"
+import { notFound, redirect } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
 import { env } from "cloudflare:workers"
 
-import { listBoardsByOwnerId, getBoardBySlug } from "../db/boards"
+import { getBoardByPastSlug, getBoardBySlug, listBoardsByOwnerId } from "../db/boards"
 import { listProducts } from "../db/products"
 import { isBoardSlug } from "../domain/board"
 import { getViewerId } from "./viewer"
@@ -27,7 +27,7 @@ export const loadBoard = createServerFn()
       ? await getBoardBySlug(env.DB, slug)
       : undefined
 
-    if (!board) throw notFound()
+    if (!board) throw await redirectRenamedBoard(slug)
 
     const userId = await getViewerId()
     const canManage = board.clerkOwnerId === userId
@@ -45,6 +45,21 @@ export const loadBoard = createServerFn()
       signedIn: userId !== null,
     }
   })
+
+// A renamed board keeps its old address working by redirecting to the new one.
+async function redirectRenamedBoard(slug: string) {
+  const renamed = isBoardSlug(slug)
+    ? await getBoardByPastSlug(env.DB, slug)
+    : undefined
+
+  return renamed
+    ? redirect({
+        to: "/$boardSlug",
+        params: { boardSlug: renamed.slug },
+        search: { view: undefined, category: undefined },
+      })
+    : notFound()
+}
 
 export const loadOwnerBoardPath = createServerFn().handler(async () => {
   const userId = await getViewerId()

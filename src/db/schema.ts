@@ -20,12 +20,21 @@ export const boards = sqliteTable(
     name: text("name").notNull(),
     slug: text("slug").notNull().unique(),
     clerkOwnerId: text("clerk_owner_id").notNull(),
+    archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .default(now),
   },
   (table) => [index("boards_owner_index").on(table.clerkOwnerId, table.createdAt)],
 )
+
+// Slugs a board used before it was renamed, so old links keep working.
+export const boardSlugs = sqliteTable("board_slugs", {
+  slug: text("slug").notNull().primaryKey(),
+  boardId: text("board_id")
+    .notNull()
+    .references(() => boards.id),
+})
 
 export const products = sqliteTable(
   "products",

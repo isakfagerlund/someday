@@ -1,6 +1,7 @@
 import { ArrowRightIcon, PlusIcon } from "../components/icons"
 import { Logo } from "../components/logo"
 import type { BoardSummary } from "../db/boards"
+import { EditBoardButton } from "./edit-board-dialog"
 
 export function BoardList({ boards, onCreate }: { boards: BoardSummary[]; onCreate: () => void }) {
   return (
@@ -18,9 +19,9 @@ export function BoardList({ boards, onCreate }: { boards: BoardSummary[]; onCrea
       </div>
       <ul className="divide-y divide-border border-y border-border">
         {boards.map((board) => (
-          <li key={board.id}>
+          <li className="flex items-center gap-1" key={board.id}>
             <a
-              className="group focus-ring flex items-center gap-4 rounded-lg py-4 no-underline"
+              className="group focus-ring flex min-w-0 flex-1 items-center gap-4 rounded-lg py-4 no-underline"
               href={`/${encodeURIComponent(board.slug)}`}
             >
               <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-surface text-xl text-muted">
@@ -41,8 +42,9 @@ export function BoardList({ boards, onCreate }: { boards: BoardSummary[]; onCrea
                   {board.productCount === 0 ? "No items yet" : `${board.productCount} ${board.productCount === 1 ? "item" : "items"}`}
                 </span>
               </span>
-              <ArrowRightIcon className="mr-1 size-5 shrink-0 fill-current text-muted group-hover:text-text" />
+              <ArrowRightIcon className="size-5 shrink-0 fill-current text-muted group-hover:text-text" />
             </a>
+            <EditBoardButton board={board} />
           </li>
         ))}
       </ul>
