@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   fetchProductPage,
+  findSharedUrl,
   ProductUrlError,
   validateProductUrl,
 } from "./product-url"
@@ -88,5 +89,22 @@ describe("fetchProductPage", () => {
       fetchProductPage("https://shop.example.com/product", fetcher),
     ).rejects.toThrow("Product page redirected too many times")
     expect(fetcher).toHaveBeenCalledTimes(6)
+  })
+})
+
+describe("findSharedUrl", () => {
+  it.each([
+    ["https://shop.example.com/lamp", "https://shop.example.com/lamp"],
+    ["Look at this https://shop.example.com/lamp?c=blue", "https://shop.example.com/lamp?c=blue"],
+    ["I want https://shop.example.com/lamp.", "https://shop.example.com/lamp"],
+    ["Nothing shared here", undefined],
+  ])("reads %j as %j", (shared, expected) => {
+    expect(findSharedUrl(shared)).toBe(expected)
+  })
+
+  it("falls back to the next shared value", () => {
+    expect(findSharedUrl(undefined, "A lamp", "https://shop.example.com/lamp")).toBe(
+      "https://shop.example.com/lamp",
+    )
   })
 })

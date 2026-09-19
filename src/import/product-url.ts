@@ -61,6 +61,16 @@ export function validateProductUrl(input: string | URL) {
   return url
 }
 
+// Android apps share a link inside a sentence instead of a dedicated URL field.
+export function findSharedUrl(...values: (string | undefined)[]) {
+  for (const value of values) {
+    const match = value?.match(/https?:\/\/[^\s"'<>]+/i)
+    if (match) return match[0].replace(/[.,;:!?)\]}]+$/, "")
+  }
+
+  return undefined
+}
+
 export type ProductFetcher = (url: string, init: RequestInit) => Promise<Response>
 
 export interface ProductPage {

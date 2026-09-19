@@ -3,13 +3,18 @@ import { lazy, Suspense } from "react"
 
 import { privateHtmlCacheHeaders } from "../catalog-cache"
 import { ChevronLeftIcon } from "../components/icons"
+import { findSharedUrl } from "../import/product-url"
 import { loadHome } from "../server/pages"
 
 const QuickSave = lazy(() => import("../owner/quick-save"))
 
+const asText = (value: unknown) => (typeof value === "string" ? value : undefined)
+
 export const Route = createFileRoute("/save")({
+  // The Chrome extension and the iPhone Shortcut send url. The Android share
+  // sheet may instead put the link inside text or title.
   validateSearch: (search: Record<string, unknown>) => ({
-    url: typeof search.url === "string" ? search.url : undefined,
+    url: asText(search.url) ?? findSharedUrl(asText(search.text), asText(search.title)),
   }),
   loader: () => loadHome(),
   headers: () => ({ ...privateHtmlCacheHeaders, "referrer-policy": "no-referrer" }),
