@@ -125,13 +125,13 @@ describe("validateProductCandidate", () => {
     expect(validateProductCandidate(candidate, evidence)).toEqual(candidate)
   })
 
-  it("rejects an image the model invented", () => {
-    expect(() =>
+  it("drops an image the model invented", () => {
+    expect(
       validateProductCandidate(
         { ...candidate, imageUrl: "https://other.example.com/invented.jpg" },
         evidence,
-      ),
-    ).toThrow(ProductCandidateError)
+      ).imageUrl,
+    ).toBe("")
   })
 
   it("rejects a canonical URL the model invented", () => {
