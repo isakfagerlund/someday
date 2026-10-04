@@ -137,6 +137,19 @@ describe("createProduct", () => {
     expect(mocks.insertProduct).not.toHaveBeenCalled()
   })
 
+  it("returns the product a concurrent request inserted first", async () => {
+    const product = { id: "existing-product" }
+    mocks.getProductByUrl.mockResolvedValueOnce(undefined).mockResolvedValueOnce(product)
+    mocks.storeProductImage.mockResolvedValue({ processedImageKey: "image-key" })
+    mocks.insertProduct.mockRejectedValue(new Error("Failed query: insert into \"products\"", {
+      cause: new Error("UNIQUE constraint failed: products.board_id, products.canonical_url"),
+    }))
+    await expect(createProduct({
+      sourceUrl, canonicalUrl: sourceUrl, name: "Dress", brand: "COS", category: "Clothing",
+      color: null, size: null, imageUrl: "https://media.cos.com/dress-front.jpg", method: "search",
+    }, "default", {} as Env)).rejects.toMatchObject({ name: "DuplicateProductError", product })
+  })
+
   it("stores the image selected by the user before inserting the product", async () => {
     const savedProduct = { id: "product-id" }
     mocks.getProductByUrl.mockResolvedValue(undefined)

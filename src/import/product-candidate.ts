@@ -40,14 +40,12 @@ export function validateProductCandidate(
     )
   }
 
-  if (!evidence.images.some((image) => image.url === candidate.imageUrl)) {
-    throw new ProductCandidateError(
-      "The model returned an image outside the product evidence",
-    )
-  }
-
   return {
     ...candidate,
+    // An invented image only loses the recommendation, not the details.
+    imageUrl: evidence.images.some((image) => image.url === candidate.imageUrl)
+      ? candidate.imageUrl
+      : "",
     canonicalUrl,
     color: candidate.color || null,
     size: candidate.size || null,

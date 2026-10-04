@@ -234,7 +234,7 @@ async function readProductPreview(
       sourceUrl,
       ...candidate,
       imageUrls,
-      recommendedImageUrl: candidate.imageUrl,
+      recommendedImageUrl: imageUrls[0] ?? "",
       method: collected.method,
       warning: null,
     }
@@ -275,10 +275,12 @@ async function removeFailedImage(bucket: R2Bucket, processedImageKey: string) {
   }
 }
 
-function isCanonicalUrlConflict(error: unknown) {
+// Drizzle wraps the D1 constraint error, so the message lives on a cause.
+function isCanonicalUrlConflict(error: unknown): boolean {
   return (
     error instanceof Error &&
-    error.message.includes("products.canonical_url")
+    (error.message.includes("products.canonical_url") ||
+      isCanonicalUrlConflict(error.cause))
   )
 }
 
